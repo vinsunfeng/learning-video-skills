@@ -33,6 +33,8 @@
 | cangjie-skill(kangarooking,5.5k★,可选) | 方法论蒸馏 | **clone 整个仓库**到 `~/.claude/skills/cangjie-skill/`(非 plugin marketplace) |
 | obsidian 技能组 | 笔记写入 vault,OFM 语法 | 已安装 |
 
+**备选引擎备注(watch-skill,oxbshw)**:其字幕语言可经环境变量配置、内置本地 faster-whisper 免 key、有面向搜索索引的多语言 OCR/embedding。当前不采用:项目过新(2026-07 发布,245★)、技术栈重(Python 3.11+uv+服务),且其多语言优势集中在检索索引层——本方案理解靠 Claude、检索靠统一中文笔记,该层不存在;字幕方面本方案阶段 0 的逐视频动态选择比其静态全局配置更灵活。重新评估的触发条件:claude-video 的英文字幕硬编码长期不修,或无字幕视频转录费用可观(后者也可先用单独 `pip install faster-whisper` 本地转录解决,不必引入整个 watch-skill)。
+
 **依赖冒烟测试**(实施时的前置动作):安装后用一个 1 分钟短视频实测 `--start/--end`、`--resolution`、`--detail`、`--out-dir`、`--max-frames`、`--timestamps` 各 flag,把实测命令写进 SKILL.md。(技术核查已确认这些 flag 存在于当前版本,但以实测为准。)
 
 ## 4. 目录结构
@@ -89,11 +91,13 @@
 
 ### 5.1 阶段 1 · 观看采集
 
-**字幕策略(v2 重写)**:claude-video 硬编码只拉英文字幕(`--sub-langs "en.*"`),**中文视频的原生字幕它拉不到**。因此:
+**字幕策略(v2.1:按原生语言动态选择,支持任意语种)**:claude-video 硬编码只拉英文字幕(`--sub-langs "en.*"`),**非英语视频的原生字幕它一律拉不到**。因此不按语种写死分支,而是:
 
-- 中文视频:skill 自行先跑 `yt-dlp --write-subs --sub-langs "zh.*" --convert-subs vtt --skip-download`(B 站按需加 `--cookies-from-browser`)取字幕;取到则作为转录来源,取不到则走 Whisper;
-- 英文视频:走 claude-video 原生流程(en 字幕免费优先);
-- 两者皆无且无 key:纯视觉理解 + 明示局限。
+- 阶段 0 已获取视频语言与字幕轨语言列表,据此**逐视频动态选择**:英文视频走 claude-video 原生流程;其他语言(中/日/韩/德…)由 skill 自行 `yt-dlp --write-subs --sub-langs "<原生语言>.*" --convert-subs vtt --skip-download`(B 站按需加 `--cookies-from-browser`)取字幕;
+- 优先级:人工字幕 > 平台自动生成字幕 > Whisper > 纯视觉 + 明示局限;
+- Whisper 兜底天然多语言(约 100 种语言、自动语种识别),Groq/OpenAI 与本地 faster-whisper 行为一致;
+- Claude 对帧内文字(任意文字系统)的识别本身是多语言的,画面理解层无需额外处理;
+- **笔记输出统一中文**,术语/命令/代码保留原文,非中文视频的关键论断可附原文引述(与 5.4 语言规则一致)。
 
 **下载与分辨率检查(v2 新增)**:B 站未登录只发 480p 以下清晰度。下载后必须检查实际分辨率,**<720p 且视频含代码/界面演示 → 停下告知用户**:提供 cookie(`--cookies-from-browser`)或本地高清文件,否则代码/界面文字转写不可信。
 
@@ -155,8 +159,8 @@
 
 | 场景 | 处理 |
 |------|------|
-| 中文原生字幕无法经 claude-video 拉取 | skill 自行 yt-dlp 拉 zh 字幕;失败走 Whisper |
-| 无字幕且无 Whisper key | 纯视觉理解,明示"转录缺失";中文视频建议直接暂停并提示配 key |
+| 非英语原生字幕无法经 claude-video 拉取 | skill 自行 yt-dlp 按阶段 0 探测到的原生语言拉字幕;失败走 Whisper(多语言自动识别) |
+| 无字幕且无 Whisper key | 纯视觉理解,明示"转录缺失";讲解为主的视频建议直接暂停并提示配 key(或本地 faster-whisper) |
 | B 站未登录清晰度 <720p 且含代码/界面 | 暂停,请用户提供 cookie 或本地文件 |
 | B 站需登录/地区限制 | 提示用户提供本地文件,不绕过 |
 | Whisper 音频 >25MB(Groq 上限) | ffmpeg 切块分段转录 |
