@@ -1,0 +1,23 @@
+[
+  {"query": "这个 B 站教程我看了三遍还是记不住 https://www.bilibili.com/video/BV1Gx411w7fs 能不能帮我弄成一份带时间点的文档，下次直接照着做就行", "should_trigger": true},
+  {"query": "帮我把 https://www.youtube.com/watch?v=C05CGMj_LVg 沉淀到我的 obsidian 库里，我那个 vault 在 ~/notes", "should_trigger": true},
+  {"query": "我下载了一个 2 小时的 Kubernetes 课程录屏在 ~/Downloads/k8s-course-day1.mp4，想把里面的 kubectl 命令和 yaml 都扒出来整理成能直接抄的文档", "should_trigger": true},
+  {"query": "刚看完这个 comfyui 安装教学，讲得挺好但步骤太碎了，帮我理成清单存下来 https://youtu.be/abc123XYZ", "should_trigger": true},
+  {"query": "这个视频里老师演示的那套 nginx 反代配置，我想留个档，以后自己搭的时候能查 https://www.youtube.com/watch?v=nginx-rp-2026", "should_trigger": true},
+  {"query": "老板让我把这场技术分享的内容写成团队内部文档，视频链接 https://www.youtube.com/watch?v=xyz987 ，最好带上他 demo 的截图", "should_trigger": true},
+  {"query": "把这个 https://www.bilibili.com/video/BV1xx411c7mD 蒸馏一下，我只要能复现的部分，废话不要", "should_trigger": true},
+  {"query": "我在准备一个内部培训，参考了这个 youtube 视频 https://youtu.be/train01 ，想先把它拆成结构化的知识点再改写，顺便存进我的知识库", "should_trigger": true},
+  {"query": "这个 40 分钟的 rust 异步编程讲座我想做成可以搜索的笔记，以后忘了能回去定位到具体第几分钟 https://youtu.be/rust-async-01", "should_trigger": true},
+
+  {"query": "这个视频讲的啥？https://www.youtube.com/watch?v=C05CGMj_LVg 我不想看完，你就跟我说个大概", "should_trigger": false},
+  {"query": "帮我看看 https://youtu.be/xyz111 第 12 分 30 秒左右他点的那个按钮是什么，我卡在那了", "should_trigger": false},
+  {"query": "我这个 ~/Movies/party.mov 有 4 个 G，帮我压到 500M 以内发微信，画质别太惨", "should_trigger": false},
+  {"query": "把 ~/Downloads/lecture.mp4 里的英文字幕翻译成中文，生成一个 srt 就行，不用做别的", "should_trigger": false},
+  {"query": "帮我从这个 youtube 播放列表批量下载音频转成 mp3，我通勤路上听 https://www.youtube.com/playlist?list=PLabc", "should_trigger": false},
+  {"query": "我这篇长文 ~/Documents/paper-transformer.pdf 帮我整理成 obsidian 笔记，带上要点和我自己的思考", "should_trigger": false},
+  {"query": "我录了一段屏幕 ~/Desktop/bug-repro.mov，你看看我们那个前端在点提交时到底哪一步报错了，帮我定位", "should_trigger": false},
+  {"query": "帮我给这个视频剪个 60 秒的精华片段发小红书，加个字幕条 ~/Movies/demo-full.mp4", "should_trigger": false},
+  {"query": "我们团队的会议录像 ~/Meetings/2026-08-05.mp4 帮我出个会议纪要，谁负责什么、deadline 是啥时候", "should_trigger": false},
+  {"query": "这个教程的 github 仓库在哪？视频简介里好像有，帮我找出来 https://youtu.be/tut-999", "should_trigger": false},
+  {"query": "帮我把我 obsidian 里那 30 篇视频笔记按主题重新分类一下，现在全堆在收件箱里了", "should_trigger": false}
+]
