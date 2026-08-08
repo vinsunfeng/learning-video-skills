@@ -39,7 +39,7 @@ git clone https://github.com/vinsunfeng/learning-video-skills.git "$REPO"
 ```
 
 **验证**：`ls "$REPO/.claude/skills/video-distill/SKILL.md"` —— 文件在才算拉到。
-体积约 880 KB（实测），几秒钟。
+体积约 1.1 MB（2026-08-08 实测），几秒钟。
 
 ### 路 C：只要 skill 本体 —— 一条命令装进 Hermes
 
@@ -106,9 +106,42 @@ hermes -p $PROFILE -z '你的 skills 里有没有 video-distill？
 > - **`hermes skills list`** —— 它只列**注册表来源**（builtin / official）的
 >   skill，**本地软链进去的不出现**。我用它验过，得到「没装上」的错误结论，
 >   而真相是我在看错的地方。
-> - **`hermes prompt-size`** 的 "Skills by size" —— 同样漏本地 skill。
+> - **`hermes prompt-size` 的 "Skills by size" 列表** —— 同样漏本地 skill。
+>   **但它的 `skills index` 那个数看得见** —— 见下面的判据二。
+>   我曾因为列表瞎就把整个工具否掉了：
+>   **同一个工具里可以有两个仪器，一个瞎一个不瞎。**
 >
 > **量错地方，会得到一个干净的、完全错误的答案。**
+
+### 判据二（不需要 LLM，机器上没配模型也能用）
+
+**如果上面那条跑不起来，用这个。**
+
+```bash
+hermes -p $PROFILE prompt-size | grep "skills index"   # 记下数字
+mv ~/.hermes/profiles/$PROFILE/skills/$CATEGORY/video-distill /tmp/vd-parked
+hermes -p $PROFILE prompt-size | grep "skills index"   # 应当变小
+mv /tmp/vd-parked ~/.hermes/profiles/$PROFILE/skills/$CATEGORY/video-distill
+hermes -p $PROFILE prompt-size | grep "skills index"   # 应当精确回到原值
+```
+
+2026-08-08 在 Fedora 机器上实测：**7,921 → 8,059 B（+138），拿掉即回落**。
+
+> 这不是「看一眼数字对不对」，是**拿一个已知变化考仪器** ——
+> 数字跟着软链动，才说明它真看见了。
+
+### ⚠️ 判据一跑不起来时，先看错误说的是什么
+
+```
+agent failed: Model ... has a context window of 16,384 tokens,
+which is below the minimum 64,000 required by Hermes Agent.
+```
+
+或 `No LLM provider configured`。
+
+**这两条跟 skill 一点关系都没有** —— Hermes agent 要求模型
+**至少 64K 上下文**，指向小上下文的本地模型时它根本起不来。
+**别把它读成「装失败了」**，改用判据二。
 
 ### 2c. 成本：装 skill 是要付常驻费的
 
@@ -131,8 +164,23 @@ hermes -p $PROFILE prompt-size | grep "skills index"
 
 ```bash
 uv tool install --python 3.11 "watch-skill[perceive,ocr,whisper,index]"
-watch-skill doctor    # 它会说缺什么：ffmpeg / yt-dlp / deno / 模型权重
+watch-skill doctor    # 它会说缺什么，并**自动补** deno / ffmpeg / yt-dlp
 ```
+
+> ⚠️ **`watch-skill` 在 PATH 里，不等于它能干活。**
+> 2026-08-08 在一台「已经有 watch-skill」的机器上实测：
+> `onnxruntime` / `rapidocr` / `faster_whisper` **三个全缺** ——
+> 裸装的版本没有 OCR、没有转录，只是命令存在。
+>
+> **判断装没装，别看 `command -v`，要看能不能 import：**
+>
+> ```bash
+> V=~/.local/share/uv/tools/watch-skill/bin/python
+> for m in onnxruntime rapidocr faster_whisper; do $V -c "import $m" || echo "$m 缺"; done
+> ```
+>
+> 上面那条 `uv tool install` **不会因为「已经装过」就跳过 extras**（已实测补齐）。
+> 所以：**照跑一次，不要因为命令已存在就略过这一步。**
 
 **钉 3.11，不要用系统 Python**，也**不要** `curl install.sh | sh`
 （它会挑系统 Python）。理由见 `README.md`：这套栈全是二进制轮子，

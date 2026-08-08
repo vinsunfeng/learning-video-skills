@@ -49,9 +49,35 @@ ln -sfn "$SRC" ~/.hermes/profiles/player-a/skills/note-taking/video-distill
 2026-08-08 我用它验过，得到「没装上」的错误结论，
 而真相是**我在看错的地方**。
 
-**也不要只看 `hermes prompt-size`** —— 它的 "Skills by size" 也漏本地 skill。
+**`hermes prompt-size` 的 "Skills by size" 列表也漏本地 skill** ——
+但**它的 `skills index` 那个数看得见**。我曾因为列表瞎就把整个工具否掉：
+
+> **同一个工具里可以有两个仪器，一个瞎一个不瞎。**
+
+### 判据二：不需要 LLM（当 agent 起不来时用这个）
+
+```bash
+hermes -p $P prompt-size | grep "skills index"    # 记下
+mv <软链> /tmp/vd-parked
+hermes -p $P prompt-size | grep "skills index"    # 应当变小
+mv /tmp/vd-parked <软链>                          # 应当精确回到原值
+```
+
+2026-08-08 Fedora 机器实测：**7,921 → 8,059 B（+138），拿掉即回落**。
+**拿已知变化考仪器**，数字跟着软链动才算它真看见了。
+
+### ⚠️ 判据一起不来时，先看错误说什么
+
+```
+agent failed: Model ... context window of 16,384 tokens,
+below the minimum 64,000 required by Hermes Agent.
+```
+
+或 `No LLM provider configured`。**这两条跟 skill 无关** ——
+Hermes agent 要求模型 **≥64K 上下文**。别读成「装失败了」，改用判据二。
 
 > **量错地方，会得到一个干净的、完全错误的答案。**
+> 而**只有一种验证方式、且它依赖 LLM 的文档，在半数机器上无法验证。**
 
 ## 二、`hermes skills install` 的真实约束
 
