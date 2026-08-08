@@ -203,6 +203,26 @@ env -u ... "$WATCH_SKILL_BIN" watch "<source>" \
 - **必须加 `--no-index`**（理由同阶段 1）。
 - **cue 数 ≤ `--max-frames`**：引擎对 cues 做 `_even_sample(cues, cap)`，超量会被抽稀，
   等于白定位，而且不报错。cue 多就提高 max-frames 或缩短分段。
+> ### ⚠️ 你可能读不了图 —— 先确认，再决定怎么读帧
+>
+> 下面写的 `Read` 每个帧路径，**前提是你能直接接收图片输入**（Claude 可以）。
+> **Hermes 不能** —— 2026-08-08 实测它自述「内置工具列表里没有图片分析工具」，
+> 必须绕一个视觉 MCP。
+>
+> 后果是实测出来的：Hermes 跑完 29 分钟教程，产出通过校验的四件套，
+> 而 `assets/` **0 张证据帧** —— 它跳过了整个抽帧阶段。
+> **不是它没有视觉能力，是这份 skill 假设了它有 `Read` 图片的能力。**
+>
+> | 你的情况 | 怎么读帧 |
+> |---|---|
+> | 能直接吃图（Claude） | `Read` 帧路径 |
+> | 不能（Hermes 等） | 用视觉 MCP，如 `mcp__minimax__understand_image`（已实测可用：逐字读出画面三行文字、认对颜色与形状） |
+> | 两者都没有 | **必须写进 frontmatter 的 `degradations`**，并且不要产出操作型 PLAYBOOK —— 纯字幕的步骤不可复现 |
+>
+> **抽帧本身不需要任何 key** —— OCR 是本地 RapidOCR。
+> 缺 key 只影响引擎的「场景描述」（`scene descriptions skipped (vision.no_api_key)`），
+> 而**画面文字照样读得到**。别把「没有视觉模型」误当成「不能抽帧」。
+
 - subagent 内 `Read` 每个帧路径（帧只进子代理上下文，用完即弃），返回**纯文本段落笔记**
   加该段证据帧路径。prompt 带上前一段的 running summary（术语表 + 进行中的主题），
   否则段间指代会断。
