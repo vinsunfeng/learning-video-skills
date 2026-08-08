@@ -1,5 +1,9 @@
 # video-distill
 
+> **另一台机器上的 agent 要装这套东西？读 [`AGENT-START.md`](./AGENT-START.md)。**
+> 那份是自助安装单，每步带验证方法 —— 包括两个实测踩过的错误安装路径，
+> 以及**为什么不能用 `hermes skills list` 验证**。
+
 把教学类视频沉淀成结构化、带时间戳、可回查的 Obsidian 笔记。
 
 一个 Claude skill（编排层）+ 一个打了三个本地补丁的观看引擎（watch-skill）。
