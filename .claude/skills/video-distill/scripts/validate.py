@@ -143,6 +143,35 @@ def bullet_lines(text: str) -> list[str]:
     return lines
 
 
+def md_files(d: Path) -> list[Path]:
+    """目录下的笔记文件 —— **跳过 AppleDouble 与隐藏文件**。
+
+    2026-08-08 实测：笔记目录经 macOS `tar` 搬到别的机器后，
+    多出 `._EXTEND.md` 这类 **AppleDouble** 伴生文件。
+    它们匹配 `*.md`，内容是二进制 ⇒ 校验器直接抛
+    `UnicodeDecodeError` 的 traceback。
+
+    > **一个把 traceback 甩给用户的校验器，等于没有校验器** ——
+    > 他不知道是自己的笔记坏了，还是工具坏了。
+
+    经 tar / zip / U 盘 / iCloud 搬运是常态，不是异常。
+    """
+    return [f for f in sorted(d.glob("*.md")) if not f.name.startswith("._")]
+
+
+def read_md(path: Path) -> str:
+    """读笔记文本。**解码失败要说人话，不要抛 traceback。**"""
+    try:
+        return path.read_text(encoding="utf-8")
+    except UnicodeDecodeError as e:
+        raise SystemExit(
+            f"✗ 读不了 {path.name}：不是 UTF-8 文本（{e.reason} @ 字节 {e.start}）。\n"
+            f"  常见原因：AppleDouble 伴生文件（`._*`）、二进制文件被误放进笔记目录、"
+            f"或文件用了 GBK/Big5 编码。\n"
+            f"  先确认这个文件该不该在这里；确实是笔记就转成 UTF-8。"
+        ) from None
+
+
 def check_unfilled(rep: Report, name: str, text: str) -> None:
     holes = UNFILLED.findall(text)
     if holes:
@@ -150,7 +179,7 @@ def check_unfilled(rep: Report, name: str, text: str) -> None:
 
 
 def check_main_note(rep: Report, path: Path) -> dict:
-    text = path.read_text(encoding="utf-8")
+    text = read_md(path)
     fm, body = split_frontmatter(text)
     name = path.name
 
@@ -226,7 +255,7 @@ def check_main_note(rep: Report, path: Path) -> dict:
 
 
 def check_playbook(rep: Report, path: Path) -> None:
-    text = path.read_text(encoding="utf-8")
+    text = read_md(path)
     _fm, body = split_frontmatter(text)
     name = path.name
     check_unfilled(rep, name, text)
@@ -265,7 +294,7 @@ def check_playbook(rep: Report, path: Path) -> None:
 
 
 def check_extend(rep: Report, path: Path) -> None:
-    text = path.read_text(encoding="utf-8")
+    text = read_md(path)
     _fm, body = split_frontmatter(text)
     name = path.name
     check_unfilled(rep, name, text)
@@ -310,8 +339,8 @@ def check_type_consistency(rep: Report, fm: dict, d: Path) -> None:
 
 def check_assets(rep: Report, d: Path, fm: dict | None = None) -> None:
     missing = []
-    for md in d.glob("*.md"):
-        for ref in IMG_EMBED.findall(md.read_text(encoding="utf-8")):
+    for md in md_files(d):
+        for ref in IMG_EMBED.findall(read_md(md)):
             target = ref.split("|")[0].strip()
             if target.startswith("assets/") and not (d / target).exists():
                 missing.append(f"{md.name} → {target}")
@@ -333,8 +362,8 @@ def check_assets(rep: Report, d: Path, fm: dict | None = None) -> None:
     # Triton 的 wheel 地址只能写成 `<triton-wheel-url>` 占位符，
     # **正是没看画面的直接后果**。
     frames = sorted((d / "assets").glob("*.jpg")) if (d / "assets").is_dir() else []
-    refs = [r for md in d.glob("*.md")
-            for r in IMG_EMBED.findall(md.read_text(encoding="utf-8"))
+    refs = [r for md in md_files(d)
+            for r in IMG_EMBED.findall(read_md(md))
             if r.split("|")[0].strip().startswith("assets/")]
     if refs:
         rep.ok("证据帧非空", f"{len(refs)} 处引用、{len(frames)} 个文件")
@@ -360,10 +389,10 @@ def check_content_hash(rep: Report, d: Path, allow_edited: bool = False) -> None
     `--allow-edited` 降级为 WARN：用于校验一份**事后被人工编辑过**的笔记，
     那种场景下不一致是预期状态（也正是重跑保护要检测的信号）。
     """
-    for md in sorted(d.glob("*.md")):
+    for md in md_files(d):
         if md.name == "transcript.md":
             continue
-        fm, body = split_frontmatter(md.read_text(encoding="utf-8"))
+        fm, body = split_frontmatter(read_md(md))
         stored = fm.get("content_hash", "").strip().strip('"').strip("'")
         if not stored:
             continue
@@ -402,7 +431,7 @@ def main() -> int:
         return 2
 
     reserved = {"PLAYBOOK.md", "EXTEND.md", "transcript.md"}
-    mains = [p for p in d.glob("*.md") if p.name not in reserved]
+    mains = [p for p in md_files(d) if p.name not in reserved]
     if len(mains) != 1:
         rep.error("主笔记唯一", f"期望 1 个主笔记，实际 {len(mains)} 个：{[p.name for p in mains]}")
         fm = {}
