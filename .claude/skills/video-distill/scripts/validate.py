@@ -308,7 +308,7 @@ def check_type_consistency(rep: Report, fm: dict, d: Path) -> None:
         rep.ok("type 与产出一致")
 
 
-def check_assets(rep: Report, d: Path) -> None:
+def check_assets(rep: Report, d: Path, fm: dict | None = None) -> None:
     missing = []
     for md in d.glob("*.md"):
         for ref in IMG_EMBED.findall(md.read_text(encoding="utf-8")):
@@ -319,6 +319,35 @@ def check_assets(rep: Report, d: Path) -> None:
         rep.error("引用的图片存在", f"{len(missing)} 处失效：{missing[:3]}")
     else:
         rep.ok("引用的图片存在")
+
+    # ── 2026-08-08 新增：一张图都不引用时，上面那条会「通过」──
+    #
+    # 实测暴露的盲区：Hermes 跑完真实教学视频，产出 0 错误 0 提醒，
+    # 而 `assets/` 里 **0 张证据帧** —— 它整份笔记只用了字幕，从没看画面。
+    # 「引用的图片存在」在**没有引用**时当然成立。
+    #
+    # > **一条只在有输入时才检查的规则，等于允许「没有输入」。**
+    #
+    # 为什么这对操作型笔记是硬错误：专名、命令、参数值以 OCR 为准 ——
+    # 声学/字幕解决不了同音与 URL。那次的 PLAYBOOK 里
+    # Triton 的 wheel 地址只能写成 `<triton-wheel-url>` 占位符，
+    # **正是没看画面的直接后果**。
+    frames = sorted((d / "assets").glob("*.jpg")) if (d / "assets").is_dir() else []
+    refs = [r for md in d.glob("*.md")
+            for r in IMG_EMBED.findall(md.read_text(encoding="utf-8"))
+            if r.split("|")[0].strip().startswith("assets/")]
+    if refs:
+        rep.ok("证据帧非空", f"{len(refs)} 处引用、{len(frames)} 个文件")
+    elif (fm or {}).get("type", "") == "理论型":
+        # 理论型只讲原理，可以没有画面证据 —— 但要说出来，不是默认放过
+        rep.warn("证据帧非空", "理论型笔记无证据帧，可接受；若视频有图表演示则应补")
+    else:
+        rep.error(
+            "证据帧非空",
+            "0 处画面引用 —— 操作型笔记必须有证据帧。"
+            "专名/命令/参数值以 OCR 为准，纯字幕产出的步骤不可复现；"
+            "确实无法抽帧就把它写进 frontmatter 的 degradations",
+        )
 
 
 def check_content_hash(rep: Report, d: Path, allow_edited: bool = False) -> None:
@@ -389,7 +418,7 @@ def main() -> int:
 
     if fm:
         check_type_consistency(rep, fm, d)
-    check_assets(rep, d)
+    check_assets(rep, d, fm)
     check_content_hash(rep, d, allow_edited=args.allow_edited)
 
     if args.json:
