@@ -21,14 +21,38 @@
 
 ---
 
-## 1. 拉仓库
+## 1. 拿到东西：三条路，按你要做什么选
+
+仓库是**公开**的，三条都不需要凭证（2026-08-08 实测匿名 200）。
+
+### 路 A：只想先看要装什么（不落盘）
 
 ```bash
-git clone https://github.com/vinsunfeng/learning-video-skills.git ~/learning-video-skills
+curl -sL https://raw.githubusercontent.com/vinsunfeng/learning-video-skills/main/AGENT-START.md
 ```
 
-**验证**：`ls ~/learning-video-skills/.claude/skills/video-distill/SKILL.md`
-—— 文件在，才算拉到了。
+### 路 B：要真跑起来 —— `git clone`（推荐）
+
+```bash
+REPO=~/learning-video-skills
+git clone https://github.com/vinsunfeng/learning-video-skills.git "$REPO"
+```
+
+**验证**：`ls "$REPO/.claude/skills/video-distill/SKILL.md"` —— 文件在才算拉到。
+体积约 880 KB（实测），几秒钟。
+
+### 路 C：只要 skill 本体 —— 一条命令装进 Hermes
+
+```bash
+hermes -p <profile> skills install \
+  https://raw.githubusercontent.com/vinsunfeng/learning-video-skills/main/.claude/skills/video-distill/SKILL.md \
+  --category note-taking --yes
+```
+
+> ⚠️ **路 C 只拉 `SKILL.md` 这一个文件** —— 不带 `scripts/` `templates/`
+> `references/`。而 `SKILL.md` 正文引用了模板和校验脚本。
+>
+> **所以：只想让 agent 知道流程 ⇒ 路 C 够了；要真产出笔记 ⇒ 必须走路 B。**
 
 仓库里**故意没有**的东西（别去找）：
 
@@ -44,8 +68,7 @@ git clone https://github.com/vinsunfeng/learning-video-skills.git ~/learning-vid
 ### 2a. 装给 Claude（Claude Code / Cowork）
 
 ```bash
-ln -sfn ~/learning-video-skills/.claude/skills/video-distill \
-        ~/.claude/skills/video-distill
+ln -sfn "$REPO/.claude/skills/video-distill" ~/.claude/skills/video-distill
 ```
 
 **验证**：新开一个会话，问「你有 video-distill 这个 skill 吗」。
@@ -58,7 +81,7 @@ ln -sfn ~/learning-video-skills/.claude/skills/video-distill \
 PROFILE=wiki          # 换成你的 profile 名
 CATEGORY=note-taking  # 见 ls ~/.hermes/profiles/$PROFILE/skills/
 
-ln -sfn ~/learning-video-skills/.claude/skills/video-distill \
+ln -sfn "$REPO/.claude/skills/video-distill" \
         ~/.hermes/profiles/$PROFILE/skills/$CATEGORY/video-distill
 ```
 
@@ -103,13 +126,30 @@ hermes -p $PROFILE prompt-size | grep "skills index"
 
 ## 3. 装 watch-skill 观看引擎
 
-`SKILL.md` 里写清了它需要什么。**别假设环境干净，先自检**：
+**先装它，再自检。** 原来这一节只写了「跑 doctor」，
+却没说 `watch-skill` 这个命令从哪来 —— **那是一条悬空的指令**。
 
 ```bash
-watch-skill doctor
+uv tool install --python 3.11 "watch-skill[perceive,ocr,whisper,index]"
+watch-skill doctor    # 它会说缺什么：ffmpeg / yt-dlp / deno / 模型权重
 ```
 
-它会说缺什么（`ffmpeg` / `yt-dlp` / `deno` / 模型权重）。**缺了再装。**
+**钉 3.11，不要用系统 Python**，也**不要** `curl install.sh | sh`
+（它会挑系统 Python）。理由见 `README.md`：这套栈全是二进制轮子，
+`onnxruntime` 是硬门槛。
+
+**Apple Silicon 想要加速**（转录走 GPU、OCR 走 CoreML）：
+
+```bash
+git clone https://github.com/oxbshw/watch-skill.git /tmp/watch-skill
+cd /tmp/watch-skill && git checkout -b local-patches
+git apply --check "$REPO/patches/001-apple-silicon-accel.patch"   # 先干跑
+git apply         "$REPO/patches/001-apple-silicon-accel.patch"
+uv tool install --force --python 3.11 --with psutil --with mlx-whisper --editable "$PWD"
+```
+
+**补丁是可选加速，不打也能跑**；非 Apple Silicon 不要打。
+2026-08-08 对上游最新版实测 `git apply --check` **通过**。
 
 > **「装过了」这件事必须能被检查** ——
 > 否则每个新会话都要重装一遍才敢用。

@@ -4,7 +4,7 @@
 每一条都来自源码核对 + 在这台机器上的实测，不是猜测。
 
 基线版本：`oxbshw/watch-skill` @ `bf177b0`（2026-07-12），本地补丁分支 `local-patches`
-位于 `~/Claude/Projects/video/vendor/watch-skill`，以 `uv tool install --editable` 装入。
+以 `uv tool install --editable` 装入（本机开发时放在 `vendor/watch-skill`；别的机器按 `patches/README.md` 自己 clone 到任意位置）。
 
 ## 目录
 
@@ -185,7 +185,7 @@ token 成本约 2.4k/帧，只对含代码/界面的视频启用。
 
 ```bash
 uv tool install --force --python 3.11 --with psutil --with mlx-whisper \
-  --editable ~/Claude/Projects/video/vendor/watch-skill
+  --editable "$WATCH_SKILL_SRC"   # 你 clone watch-skill 的位置
 ```
 
 ## 9. 已知无害告警

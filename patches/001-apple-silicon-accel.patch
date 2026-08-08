@@ -1,0 +1,232 @@
+From 173da7273793d7cc9126005a92f977f2a03a31dc Mon Sep 17 00:00:00 2001
+From: vinsunFeng <vdev@MacBook-Pro-2.local>
+Date: Fri, 31 Jul 2026 09:19:05 +0800
+Subject: [PATCH] local: mlx-whisper backend for Apple Silicon + enable
+ RapidOCR CoreML EP
+
+---
+ src/watch_skill/perceive/ocr.py           |  37 +++++++
+ src/watch_skill/transcribe/local.py       |  26 ++++-
+ src/watch_skill/transcribe/mlx_backend.py | 118 ++++++++++++++++++++++
+ 3 files changed, 180 insertions(+), 1 deletion(-)
+ create mode 100644 src/watch_skill/transcribe/mlx_backend.py
+
+diff --git a/src/watch_skill/perceive/ocr.py b/src/watch_skill/perceive/ocr.py
+index 0589406..e0caddb 100644
+--- a/src/watch_skill/perceive/ocr.py
++++ b/src/watch_skill/perceive/ocr.py
+@@ -41,6 +41,42 @@ def resolve_ocr_lang(lang: str | None) -> str:
+     return _LANG_TO_SCRIPT.get(key, "default")
+ 
+ 
++def _coreml_params(models_dir: Path) -> dict:
++    """LOCAL PATCH: enable the CoreML EP on Apple Silicon.
++
++    RapidOCR's ``ProviderConfig.is_coreml_available()`` short-circuits on its
++    very first line (``if not self.cfg_use_coreml: return False``) and
++    ``config.yaml`` ships ``use_coreml: false``. Upstream watch-skill never
++    sets it, so PP-OCR det+rec run on the CPU EP even though onnxruntime
++    1.28 on macOS arm64 does expose ``CoreMLExecutionProvider``.
++
++    Also moves the compiled-model cache off ``/tmp`` (RapidOCR's default),
++    which macOS purges — otherwise every run pays CoreML compilation again.
++
++    Returns {} on any non-Apple-Silicon platform, and is written so that a
++    missing CoreML EP simply leaves RapidOCR on CPU rather than failing.
++    """
++    import platform  # noqa: PLC0415
++    import sys  # noqa: PLC0415
++
++    if sys.platform != "darwin" or platform.machine() != "arm64":
++        return {}
++    try:
++        from onnxruntime import get_available_providers  # noqa: PLC0415
++
++        if "CoreMLExecutionProvider" not in get_available_providers():
++            return {}
++    except ImportError:
++        return {}
++
++    cache_dir = models_dir / "coreml-cache"
++    cache_dir.mkdir(parents=True, exist_ok=True)
++    return {
++        "EngineConfig.onnxruntime.use_coreml": True,
++        "EngineConfig.onnxruntime.coreml_ep_cfg.ModelCacheDirectory": str(cache_dir),
++    }
++
++
+ def _script_params(script: str) -> dict:
+     """RapidOCR params for one script model (benchmarked combos)."""
+     from rapidocr.utils.typings import (  # noqa: PLC0415
+@@ -92,6 +128,7 @@ def _get_engine(lang: str = "default"):
+         "Global.model_root_dir": str(models_dir),
+         "Global.log_level": "warning",  # keep MCP stdio clean
+     }
++    params.update(_coreml_params(models_dir))
+     if lang != "default":
+         params.update(_script_params(lang))
+     try:
+diff --git a/src/watch_skill/transcribe/local.py b/src/watch_skill/transcribe/local.py
+index c694ce4..81714e9 100644
+--- a/src/watch_skill/transcribe/local.py
++++ b/src/watch_skill/transcribe/local.py
+@@ -76,7 +76,31 @@ def pick_model_size() -> str:
+ def transcribe_local(
+     audio_path: Path, model_size: str = "auto", language: str | None = None
+ ) -> Transcript:
+-    """Transcribe an audio file fully offline with faster-whisper."""
++    """Transcribe an audio file fully offline.
++
++    LOCAL PATCH: on Apple Silicon, try mlx-whisper (GPU) first — CTranslate2
++    has no Metal backend, so the stock path leaves the GPU idle and is capped
++    at ``medium`` by ``_RAM_LADDER``. Falls back to faster-whisper on any
++    failure. Set ``WATCHSKILL_WHISPER_BACKEND=ctranslate2`` to opt out.
++    """
++    import os  # noqa: PLC0415
++
++    if os.environ.get("WATCHSKILL_WHISPER_BACKEND", "").lower() != "ctranslate2":
++        from watch_skill.transcribe.mlx_backend import (  # noqa: PLC0415
++            mlx_available,
++            transcribe_mlx,
++        )
++
++        if mlx_available():
++            try:
++                return transcribe_mlx(audio_path, model_size, language)
++            except TranscriptionError as exc:
++                print(
++                    f"[watch-skill] mlx whisper unavailable ({exc}); "
++                    "falling back to faster-whisper on CPU",
++                    file=sys.stderr,
++                )
++
+     try:
+         from faster_whisper import WhisperModel  # noqa: PLC0415
+     except ImportError as exc:
+diff --git a/src/watch_skill/transcribe/mlx_backend.py b/src/watch_skill/transcribe/mlx_backend.py
+new file mode 100644
+index 0000000..def181f
+--- /dev/null
++++ b/src/watch_skill/transcribe/mlx_backend.py
+@@ -0,0 +1,118 @@
++"""Apple Silicon GPU transcription via mlx-whisper — LOCAL PATCH (not upstream).
++
++Why this exists
++---------------
++Upstream's only local backend is faster-whisper, i.e. CTranslate2. CTranslate2
++has **no Metal / CoreML backend at all**: on an Apple Silicon machine
++``get_cuda_device_count()`` is 0 and the supported compute types are just
++``{int8, float32, int8_float32}``, so the GPU sits idle and every transcript is
++produced on CPU.
++
++Measured on an M2 Pro (60 s of Mandarin audio, CPU int8):
++
++    base    transcribe  4.2 s   RTF 0.07x   traditional chars, many errors
++    medium  transcribe 37.1 s   RTF 0.62x   simplified chars, accurate
++
++``base`` is unusable for note-taking (it wrote 多餐口圖 for 多参考图), and
++upstream's ``_RAM_LADDER`` caps out at ``medium`` — ``large-v3`` is reachable
++only through the NVIDIA branch. mlx-whisper runs the same weights on the Apple
++GPU, which makes ``large-v3`` affordable here.
++
++Contract
++--------
++``transcribe_mlx`` returns the same ``Transcript`` shape as
++``transcribe_local``, so the caller cannot tell them apart. Any failure raises
++``TranscriptionError`` and the caller falls back to CTranslate2.
++"""
++from __future__ import annotations
++
++import platform
++import sys
++from pathlib import Path
++
++from watch_skill.errors import TranscriptionError
++from watch_skill.transcribe.types import Segment, Transcript
++
++# Apple GPU makes the big model affordable; keep parity with the CUDA branch.
++MLX_DEFAULT_MODEL = "large-v3"
++
++# Upstream size names → mlx-community repo ids.
++_MLX_REPOS = {
++    "tiny": "mlx-community/whisper-tiny-mlx",
++    "base": "mlx-community/whisper-base-mlx",
++    "small": "mlx-community/whisper-small-mlx",
++    "medium": "mlx-community/whisper-medium-mlx",
++    "large-v3": "mlx-community/whisper-large-v3-mlx",
++    "large-v3-turbo": "mlx-community/whisper-large-v3-turbo",
++}
++
++
++def is_apple_silicon() -> bool:
++    return sys.platform == "darwin" and platform.machine() == "arm64"
++
++
++def mlx_available() -> bool:
++    """True when mlx-whisper can actually run on this machine."""
++    if not is_apple_silicon():
++        return False
++    try:
++        import mlx_whisper  # noqa: F401, PLC0415
++    except ImportError:
++        return False
++    return True
++
++
++def resolve_repo(model_size: str) -> str:
++    """Map a size name to an mlx repo id; pass through explicit repo ids."""
++    if "/" in model_size:  # caller gave a full hf repo id
++        return model_size
++    return _MLX_REPOS.get(model_size, _MLX_REPOS[MLX_DEFAULT_MODEL])
++
++
++def transcribe_mlx(
++    audio_path: Path, model_size: str = "auto", language: str | None = None
++) -> Transcript:
++    """Transcribe on the Apple GPU. Raises TranscriptionError on any failure."""
++    try:
++        import mlx_whisper  # noqa: PLC0415
++    except ImportError as exc:
++        raise TranscriptionError(
++            "mlx-whisper is not installed",
++            code="transcribe.missing_dependency",
++            fix='install it into the tool env: `uv tool install --with mlx-whisper ...`',
++        ) from exc
++
++    size = MLX_DEFAULT_MODEL if model_size == "auto" else model_size
++    repo = resolve_repo(size)
++    print(
++        f"[watch-skill] local whisper: model={size} device=mlx (apple gpu) repo={repo}…",
++        file=sys.stderr,
++    )
++    try:
++        result = mlx_whisper.transcribe(
++            str(audio_path),
++            path_or_hf_repo=repo,
++            language=language,
++            # word_timestamps stays off: we only need segment-level stamps and
++            # it roughly doubles the decode cost.
++            verbose=None,
++        )
++    except Exception as exc:
++        raise TranscriptionError(
++            f"mlx whisper failed: {exc}",
++            code="transcribe.mlx_failed",
++            fix="falls back to faster-whisper on CPU automatically; "
++            "set WATCHSKILL_WHISPER_BACKEND=ctranslate2 to skip mlx entirely",
++            details={"model": size, "repo": repo},
++        ) from exc
++
++    segments = [
++        Segment(
++            start=round(float(s["start"]), 2),
++            end=round(float(s["end"]), 2),
++            text=str(s["text"]).strip(),
++        )
++        for s in result.get("segments", [])
++        if str(s.get("text", "")).strip()
++    ]
++    return Transcript(segments=segments, source=f"whisper-mlx ({size})")
+-- 
+2.50.1 (Apple Git-155)
+

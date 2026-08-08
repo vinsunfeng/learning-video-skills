@@ -19,7 +19,9 @@
 软链（推荐）或复制：
 
 ```bash
-SRC=~/Claude/Projects/video/.claude/skills/video-distill
+# REPO = 你 clone 下来的位置
+REPO=~/learning-video-skills
+SRC=$REPO/.claude/skills/video-distill
 ln -sfn "$SRC" ~/.hermes/profiles/player-a/skills/note-taking/video-distill
 ```
 

@@ -33,16 +33,31 @@
 
 **用 uv 托管的 CPython 3.11，不要用系统 Python。**
 
+**最省事：直接从上游装，不打补丁。**
+
 ```bash
-git clone https://github.com/oxbshw/watch-skill.git vendor/watch-skill
-cd vendor/watch-skill && git checkout -b local-patches
-# 应用本仓库 vendor/ 目录下的三个补丁（见下节）
+uv tool install --python 3.11 "watch-skill[perceive,ocr,whisper,index]"
+watch-skill doctor    # 自动补 ffmpeg / yt-dlp / deno
+```
+
+**Apple Silicon 想要加速**（转录走 GPU、OCR 走 CoreML）—— 再多两步：
+
+```bash
+git clone https://github.com/oxbshw/watch-skill.git /tmp/watch-skill
+cd /tmp/watch-skill && git checkout -b local-patches
+git apply --check "$REPO/patches/001-apple-silicon-accel.patch"   # 先干跑
+git apply         "$REPO/patches/001-apple-silicon-accel.patch"
 
 uv tool install --force --python 3.11 --with psutil --with mlx-whisper \
   --editable "$PWD"
-
-watch-skill doctor    # 自动补 ffmpeg / yt-dlp / deno
+watch-skill doctor
 ```
+
+> **补丁是可选的加速，不是必需。** 不打也能跑，只是转录和 OCR 走 CPU 路径。
+> 非 Apple Silicon 的机器**不要**打。详见 [`patches/README.md`](./patches/README.md)。
+>
+> **旧版 README 把它写成必做步骤，而补丁文件当时不在仓库里** ——
+> 那是一条跑不通的指令，而**文档里跑不通的指令比没有文档更糟**。
 
 为什么钉 3.11：这套栈全是二进制轮子。`onnxruntime` 是硬门槛且绕不过 —— OCR、
 嵌入模型、以及 faster-whisper 自己的 VAD 都依赖它。3.11 的轮子覆盖最全；本机系统
