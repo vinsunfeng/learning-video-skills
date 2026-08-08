@@ -1,0 +1,29 @@
+# ── 跑出来的中间产物：不进仓库 ──
+# 它们是**过程**，不是**成果**。仓库要能被别的机器克隆下来干活，
+# 而不是把这台机器的临时文件也搬过去。
+#
+# 注意：**gitignore 不支持行尾注释** —— 2026-08-08 我写成
+# `tmp-vision/    # 64M` 之后整行被当成一个模式，一个文件都没排除掉。
+tmp-vision/
+video-distill-workspace/
+.tmp-frames/
+*.mp3
+*.mp4
+*.wav
+
+# ── vendor：第三方代码的本地副本，不进仓库 ──
+# 12M，且是 watch-skill 的副本 —— 同一份代码存在两处，
+# 副本一定会漂移，而漂移的那一刻没人会知道。
+# 装法写在 README / HERMES-INSTALL.md 里，让每台机器自己装。
+vendor/
+
+# ── 模型权重：永远不要进 ──
+# 几个 GB，进了 git 就毁掉仓库。权重可以重新下载，历史不能。
+*.gguf
+*.safetensors
+*.bin
+*.onnx
+models/
+
+# macOS
+.DS_Store

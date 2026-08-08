@@ -1,0 +1,13 @@
+{
+  "skill_name": "video-distill",
+  "evals": [
+    {
+      "id": 0,
+      "name": "chinese-no-captions-operational",
+      "prompt": "帮我把这个视频整理成笔记存到 Obsidian 里：https://www.youtube.com/watch?v=LNH4I47ufLk 我想以后不用重看视频就能照着搭一遍。",
+      "expected_output": "在 ~/notes/视频笔记/<分类>/yt-LNH4I47ufLk/ 下产出主笔记 + PLAYBOOK + EXTEND + transcript + assets；validate.py 通过；主笔记每条要点带时间戳；PLAYBOOK 每步带时间戳；EXTEND 无时间戳且条目带 [扩展]；frontmatter 记录 720p 降采样等降级；专有名词采用 OCR 的写法（真人 AI 短剧，而非同音误识的短距）。",
+      "files": [],
+      "assertions": []
+    }
+  ]
+}
