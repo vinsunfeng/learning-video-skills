@@ -287,6 +287,75 @@ def check_playbook(rep: Report, path: Path) -> None:
     else:
         rep.ok("步骤须带时间戳", f"{len(blocks)} 步全部合规")
 
+    # ── 2026-08-08 新增：步骤时间戳必须单调不减 ──
+    #
+    # 这条是**盲测抓出来的**：一个只读手册的 agent 报告
+    # 「步骤 12 是 21:45–24:04，步骤 13 却是 22:00–24:50，起点早于上一步、区间重叠
+    #  —— 这些区间拼不成一条单调时间线，说明时间戳至少有一部分是推测的」。
+    # 实测确认它说得对。
+    #
+    # > **而这条是可以机械判定的** —— 盲测发现之后，就不该再让人去发现第二次。
+    # > 盲测昂贵（要派一个 agent），能落成检查的就要落成检查。
+    #
+    # 判据用「起点不得早于上一步起点」而不是「区间不得重叠」：
+    # 讲者回头补充上一步是常态，轻微重叠不算错；**起点倒退**才说明顺序坏了。
+    starts: list[tuple[str, int]] = []
+    for b in blocks:
+        m = re.search(rf"\[({_TS})", b)
+        if not m:
+            continue
+        parts = [int(x) for x in m.group(1).split(":")]
+        sec = parts[0] * 60 + parts[1] if len(parts) == 2 else parts[0] * 3600 + parts[1] * 60 + parts[2]
+        starts.append((m.group(1), sec))
+    back = [f"{starts[i][0]} 在 {starts[i - 1][0]} 之后却更早"
+            for i in range(1, len(starts)) if starts[i][1] < starts[i - 1][1]]
+    if back:
+        rep.error(
+            "步骤时间戳单调",
+            f"{len(back)} 处倒退：{back[:3]}"
+            "——步骤顺序应与视频时间一致；倒退通常意味着时间戳是推测的",
+            name,
+        )
+    elif starts:
+        rep.ok("步骤时间戳单调", f"{len(starts)} 步顺序正确")
+
+    # ── 区间重叠：比「起点倒退」更弱的信号，但盲测抓到的正是这个 ──
+    #
+    # 我第一次加检查时**选错了判据**：写了「起点不得倒退」，
+    # 而实测数据是 `[21:45–24:04]` 后接 `[22:00–24:50]` ——
+    # 起点 21:45→22:00 是递增的，检查打了个 ✓。
+    #
+    # > **我差点把那个 ✓ 当成「检查有效」** ——
+    # > 而它其实只证明了「我要找的东西不在这个检查的视野里」。
+    # > 先验证仪器能看见一个已知的东西，这条我又漏了一次。
+    #
+    # 重叠只给 WARN：讲者回头补充、一步跨越另一步是可能的。
+    # 但重叠超过一步自身长度的一半，通常意味着区间是估的。
+    spans: list[tuple[str, int, int]] = []
+    for b in blocks:
+        m = re.search(rf"\[({_TS})\s*[–\-~至]\s*({_TS})\]", b)
+        if not m:
+            continue
+
+        def _s(x: str) -> int:
+            p = [int(i) for i in x.split(":")]
+            return p[0] * 60 + p[1] if len(p) == 2 else p[0] * 3600 + p[1] * 60 + p[2]
+
+        spans.append((m.group(0), _s(m.group(1)), _s(m.group(2))))
+    heavy = [f"{spans[i][0]} 与上一步 {spans[i - 1][0]} 重叠 {spans[i - 1][2] - spans[i][1]}s"
+             for i in range(1, len(spans))
+             if spans[i][1] < spans[i - 1][2]
+             and (spans[i - 1][2] - spans[i][1]) * 2 > (spans[i][2] - spans[i][1])]
+    if heavy:
+        rep.warn(
+            "步骤区间不重叠",
+            f"{len(heavy)} 处大幅重叠：{heavy[:3]}"
+            "——区间估算过的话，读者按时间戳回查会找错位置",
+            name,
+        )
+    elif spans:
+        rep.ok("步骤区间不重叠", f"{len(spans)} 个区间无大幅重叠")
+
     if "## 前置条件" not in body:
         rep.warn("前置条件", "缺少「## 前置条件」——盲测最常暴露的缺口", name)
     if "## 验证" not in body:
