@@ -83,7 +83,7 @@ Python 是 Homebrew 3.14，cp314 轮子的可用性未经确认，没必要赌�
 ### 3. skill 软链到全局
 
 ```bash
-ln -s "$PWD/.claude/skills/video-distill" ~/.claude/skills/video-distill
+ln -sfn "$REPO/.claude/skills/video-distill" ~/.claude/skills/video-distill
 ```
 
 本 skill 与代码项目无关，需要在任意目录都能触发。

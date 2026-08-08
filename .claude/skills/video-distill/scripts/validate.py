@@ -118,7 +118,16 @@ def sections(body: str) -> dict[str, str]:
 
 
 def bullet_lines(text: str) -> list[str]:
-    """正文条目行，跳过注释、表格、代码块。"""
+    """正文条目行，跳过注释、表格、代码块。
+
+    2026-08-08 修：原来只跳过**以 `<!--` 开头的那一行**，
+    多行注释的内部行会漏进来。而 `EXTEND.md` 模板自带的注释里
+    正好有一个编号列表 ⇒ **任何保留模板注释的笔记都被误判不通过**。
+    实测：剥掉注释后同一份笔记从「1/6 条缺标记」变成「4 条全部合规」。
+
+    > docstring 当时已经写着「跳过注释」—— **它承诺了代码没做的事。**
+    """
+    text = re.sub(r"<!--.*?-->", "", text, flags=re.S)   # 先整块剥掉注释
     lines, in_code = [], False
     for raw in text.splitlines():
         s = raw.strip()

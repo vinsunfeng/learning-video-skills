@@ -23,7 +23,8 @@
 
 ## 1. 拿到东西：三条路，按你要做什么选
 
-仓库是**公开**的，三条都不需要凭证（2026-08-08 实测匿名 200）。
+仓库是**公开**的，不需要凭证（2026-08-08 实测匿名 200）。
+**两条可用**（路 C 曾写在这里，实测不可用，已标注）。
 
 ### 路 A：只想先看要装什么（不落盘）
 
@@ -41,18 +42,27 @@ git clone https://github.com/vinsunfeng/learning-video-skills.git "$REPO"
 **验证**：`ls "$REPO/.claude/skills/video-distill/SKILL.md"` —— 文件在才算拉到。
 体积约 1.1 MB（2026-08-08 实测），几秒钟。
 
-### 路 C：只要 skill 本体 —— 一条命令装进 Hermes
+### ~~路 C：一条命令装进 Hermes~~ —— **实测不可用，别走**
 
 ```bash
-hermes -p <profile> skills install \
-  https://raw.githubusercontent.com/vinsunfeng/learning-video-skills/main/.claude/skills/video-distill/SKILL.md \
-  --category note-taking --yes
+# ❌ hermes -p <profile> skills install <raw SKILL.md URL> --category note-taking --yes
 ```
 
-> ⚠️ **路 C 只拉 `SKILL.md` 这一个文件** —— 不带 `scripts/` `templates/`
-> `references/`。而 `SKILL.md` 正文引用了模板和校验脚本。
->
-> **所以：只想让 agent 知道流程 ⇒ 路 C 够了；要真产出笔记 ⇒ 必须走路 B。**
+`hermes skills install --help` 明写「or a direct HTTP(S) URL to a SKILL.md file」，
+**但 v0.19.0 的代码里没有这个分支。** 2026-08-08 三条独立证据：
+
+| 试的东西 | 结果 |
+|---|---|
+| 本仓库的 raw URL（同机 `curl` = **200**） | `Could not fetch ... from any source` |
+| 换第三方非隐藏目录的公开 SKILL.md | **一样失败** ⇒ 不是 `.claude` 点目录的问题 |
+| 去掉全部代理变量重试 | **一样失败** ⇒ 不是代理 |
+| `grep urlparse\|startswith("http")` 于 `skills_hub.py` 的安装路径 | **没有** ⇒ 代码里确实没这个分支 |
+
+> **`--help` 承诺了代码里没有的功能，而我照着 `--help` 把它写进了文档。**
+> 这是「凭印象写接口」的变体，而且更难防 ——
+> **官方帮助文本也是一种二手信息。**
+
+⇒ **只走路 B。** 装 skill 靠 clone + 软链（下一节）。
 
 仓库里**故意没有**的东西（别去找）：
 
@@ -201,6 +211,27 @@ uv tool install --force --python 3.11 --with psutil --with mlx-whisper --editabl
 
 > **「装过了」这件事必须能被检查** ——
 > 否则每个新会话都要重装一遍才敢用。
+
+### ⚠️ 非 Apple 机器：**默认模型会把中文技术词听错**
+
+`transcribe/local.py` 只有检测到 **CUDA** 才用 `large-v3`，
+否则落到 **`base`**。2026-08-08 在 213（CPU）用一段**已知台词**实测：
+
+| 我说的 | `base` 听成 |
+|---|---|
+| 环境**自检** | 环境**字简** |
+| **索引**起来 | **所引**起来 |
+| **产出**笔记 | **传出**笔记 |
+| **不**验证 | **补**验证 |
+
+四个错的全是**技术词** —— 而技术视频的笔记恰恰靠这些词。
+
+```bash
+export WATCHSKILL_WHISPER_MODEL=large-v3-turbo   # 或 medium，看机器扛不扛
+```
+
+> 转录「跑通了」和转录「能用」是两件事。
+> **只看它有没有输出，会把一份错字连篇的转录当成成功。**
 
 ### macOS 上值得知道的两处（本机实测）
 

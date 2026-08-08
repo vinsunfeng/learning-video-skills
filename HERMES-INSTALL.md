@@ -22,7 +22,7 @@
 # REPO = 你 clone 下来的位置
 REPO=~/learning-video-skills
 SRC=$REPO/.claude/skills/video-distill
-ln -sfn "$SRC" ~/.hermes/profiles/player-a/skills/note-taking/video-distill
+ln -sfn "$SRC" ~/.hermes/profiles/<profile>/skills/note-taking/video-distill
 ```
 
 **用软链，不要复制。** 同一份规则存在两个副本，副本一定会漂移，
@@ -38,9 +38,13 @@ ln -sfn "$SRC" ~/.hermes/profiles/player-a/skills/note-taking/video-distill
 ### 验证：只有一个判据算数 —— 问 agent 自己
 
 ```bash
-~/.local/bin/<profile> -z '你的 skills 里有没有 <skill-name>？
-有就一句话说它干什么，没有只回「没有」。' --yolo -m deepseek-v4-flash
+hermes -p <profile> -z '你的 skills 里有没有 <skill-name>？
+有就一句话说它干什么，没有只回「没有」。' --yolo
 ```
+
+（原来这里写的是 `~/.local/bin/<profile>` —— 那是**我这台机器上的启动器约定**，
+别的机器没有；也别硬编码 `-m deepseek-v4-flash`，
+2026-08-08 在 213 上它报 `No LLM provider configured`。）
 
 它答「有」并说对用途 ⇒ 成功。
 
@@ -90,8 +94,18 @@ hermes skills install <identifier>
 ```
 
 **它不接受本地路径。** 所以本地 skill 只能软链/复制进去（见上）。
-若要让别人一条命令装上，把 `SKILL.md` 放到一个可访问的 HTTP(S) 地址，
-然后 `hermes skills install <url> --category <cat>`。
+
+### ⚠️ 上面那段「URL」是抄 `--help` 的，**实测不可用**
+
+v0.19.0 上 `skills install <raw URL>` 一律
+`Could not fetch ... from any source`，即使同机 `curl` 返回 **200**。
+换第三方非隐藏路径的 URL 同样失败；无代理；
+而 `skills_hub.py` 的安装路径里**根本没有 URL 分支**。
+
+> **`--help` 承诺了代码里没有的功能** ——
+> 官方帮助文本也是二手信息，**照抄它等于凭印象写接口**。
+
+⇒ 让别人装上的唯一可靠方式：**clone 仓库 + 软链**。
 
 ## 三、skill 的格式：Claude 与 Hermes 通用
 
