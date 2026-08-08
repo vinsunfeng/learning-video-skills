@@ -27,3 +27,8 @@ models/
 
 # macOS
 .DS_Store
+
+# 第三方 skill 合集（来自 mattpocock/skills，由 skills-lock.json 管理）
+# 不进本仓库：与视频技能无关，且没有上游许可授权可供转发
+.agents/
+skills-lock.json
