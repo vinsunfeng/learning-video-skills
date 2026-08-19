@@ -42,6 +42,8 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
+import time
 import re
 import subprocess
 import sys
@@ -83,6 +85,72 @@ def ask(profile: str, skill: str, query: str, timeout: float = 180.0) -> str:
     return " ".join((r.stdout + r.stderr).split())[:240]
 
 
+def ask_claude(skill: str, query: str, timeout: float = 240.0) -> tuple[bool | None, str]:
+    """Claude 侧：把**真实的用户原话**发给 `claude -p`，看它是否调用目标 skill。
+
+    ## 为什么这条比「问它会不会用」更硬
+
+    Hermes 侧那条问的是 agent 的**自述**（「你会不会用 X」）。这里读的是
+    `stream-json` 里真实的 `tool_use` 事件 —— **行为，不是自述。**
+
+    ## 三个必须做对的细节
+
+    1. **必须核对 skill 名字。** 本机装着 30 多个 skill，
+       「出现了 `"name":"Skill"`」只说明触发了*某个* skill。
+       实测正例的 input 是 `{"skill": "video-distill", ...}` —— 名字对上才算。
+    2. **一检测到就杀进程。** 不杀的话它会真去干活：实测一条正例跑了
+       **26 次 Bash**、下载视频、跑 doctor。既慢（75~150s）又有副作用。
+    3. **超时返回 None，不是 False。** 读不出结论 ≠ 没触发。
+       把超时算成 NO_TRIGGER 会凭空抬高负例分数。
+
+    ## 为什么不用 skill-creator 的官方 harness
+
+    它造一个**合成 command** 放进 `.claude/commands/`，而真实触发走的是
+    `~/.claude/skills/` 里的 skill —— 这个 CLI 版本里是两套机制。
+    2026-08-08 实测：修掉 401、修掉 description 截断、把默认 30s 超时提到 240s
+    之后，**20/20 仍然 `rate=0`**。那是结构性不兼容，不是配置问题。
+    """
+    claude = Path.home() / ".local/bin/claude"
+    cmd = [str(claude), "-p", query, "--output-format", "stream-json",
+           "--verbose", "--include-partial-messages"]
+    env = dict(os.environ)
+    env.pop("CLAUDECODE", None)          # 允许在 claude 里嵌套 claude -p
+    env.setdefault("LANG", "en_US.UTF-8")
+
+    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+                            stdin=subprocess.DEVNULL, text=True, env=env,
+                            cwd=str(Path.home() / "Claude/Projects/video"))
+    # ── 只看 Skill 事件**之后**的 input 分片 ──
+    #
+    # 第一版写的是「见到 Skill 事件后，在整个累积缓冲里找 skill 名」——
+    # 而缓冲里早就有 system 事件列出的**全部可用 skill 清单**（本机 30 多个，
+    # 含 video-distill）。于是只要触发了*任何一个* skill，名字就「找到了」。
+    #
+    # 实测后果：「帮我写一个 Python 快速排序函数」被判成触发 video-distill。
+    # **负对照当场抓住了它。**
+    #
+    # > **又一个会自己命中的过滤器。** 今天第三次。
+    # > 判据必须锚在「这一次 tool_use 的 input」上，不是「流里出现过这个词」。
+    want = re.compile(r'"skill"\s*:\s*"' + re.escape(skill) + r'"')
+    t0, in_skill, frag, other = time.time(), False, "", False
+    try:
+        for line in proc.stdout:                       # type: ignore[union-attr]
+            if '"name":"Skill"' in line:
+                in_skill, frag = True, ""              # 新的 Skill 调用，清空分片
+            if in_skill:
+                frag += line
+                if want.search(frag):
+                    return True, f"Skill tool_use → {skill}"
+                # input 结束了还没匹配上 ⇒ 触发的是别的 skill
+                if '"type":"content_block_stop"' in line:
+                    in_skill, other = False, True
+            if time.time() - t0 > timeout:
+                return None, "__TIMEOUT__"
+    finally:
+        proc.kill()                                    # 不杀会真去干活
+    return False, "触发了别的 skill" if other else "无 Skill 事件"
+
+
 def verdict(ans: str) -> bool | None:
     """None = 读不出结论。**读不出不等于没触发** —— 不许当成 NO_TRIGGER。"""
     if "NO_TRIGGER" in ans or "NO TRIGGER" in ans:
@@ -98,6 +166,8 @@ def main() -> int:
     ap.add_argument("--profile", default="wiki")
     ap.add_argument("--skill", default="video-distill")
     ap.add_argument("--out", default="/tmp/trigger_test.jsonl")
+    ap.add_argument("--backend", choices=["hermes", "claude"], default="hermes",
+                    help="hermes = 问自述（快）｜claude = 读真实 tool_use 事件（硬）")
     a = ap.parse_args()
 
     items = CONTROLS + json.loads(Path(a.eval_set).read_text(encoding="utf-8"))
@@ -106,8 +176,11 @@ def main() -> int:
 
     rows = []
     for i, it in enumerate(items):
-        ans = ask(a.profile, a.skill, it["query"])
-        v = verdict(ans)
+        if a.backend == "claude":
+            v, ans = ask_claude(a.skill, it["query"])
+        else:
+            ans = ask(a.profile, a.skill, it["query"])
+            v = verdict(ans)
         row = {"i": i, "ctl": it.get("ctl", ""), "expected": it["should_trigger"],
                "got": v, "ok": (v == it["should_trigger"]) if v is not None else None,
                "q": it["query"][:50], "ans": ans[:120]}
