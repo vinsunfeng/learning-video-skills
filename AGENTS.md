@@ -124,8 +124,9 @@
 > **SKILL.md 阶段 2 曾写「subagent 内 `Read` 每个帧路径」——
 > 那句话默认了 agent 能吃图，Claude 能，Hermes 不能。已加对照表修正。**
 
-分工建议：**开发与验证用 Claude Code CLI**（可观测、能读图），
-**批量无人值守用 Hermes**（快、认证稳）。
+分工建议（2026-08-28 更新）：**日常批处理/验证默认用 hermes / opencode / reasonix** ——
+claude CLI 走用户 Anthropic 账号的按模型月度额度，已撞 429 上限，**只在与 claude 本身
+是研究对象时使用**（如触发准确性测试），且要节制、等额度刷新后小批量跑。
 
 ### 3.3 Hermes 侧安装（要装到别的 profile 时照这个）
 
