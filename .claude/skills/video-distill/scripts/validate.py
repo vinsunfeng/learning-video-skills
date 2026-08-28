@@ -256,7 +256,7 @@ def check_main_note(rep: Report, path: Path) -> dict:
 
 def check_playbook(rep: Report, path: Path) -> None:
     text = read_md(path)
-    _fm, body = split_frontmatter(text)
+    fm, body = split_frontmatter(text)
     name = path.name
     check_unfilled(rep, name, text)
 
@@ -309,13 +309,28 @@ def check_playbook(rep: Report, path: Path) -> None:
         starts.append((m.group(1), sec))
     back = [f"{starts[i][0]} 在 {starts[i - 1][0]} 之后却更早"
             for i in range(1, len(starts)) if starts[i][1] < starts[i - 1][1]]
+    # 2026-08-28：路线组织的手册（frontmatter 声明 organization: task-routes）
+    # 步骤按任务顺序排，时间戳只是回查凭据，合法地不随步骤递增 ——
+    # 实测 yt-LNH4I47ufLk（R1–R4 路线矩阵）被单调 ERROR 误伤。声明了就降为提醒；
+    # 未声明仍视为时间线手册，倒退保持 ERROR（它通常意味着时间戳是推测的）。
     if back:
-        rep.error(
-            "步骤时间戳单调",
-            f"{len(back)} 处倒退：{back[:3]}"
-            "——步骤顺序应与视频时间一致；倒退通常意味着时间戳是推测的",
-            name,
-        )
+        if fm.get("organization") == "task-routes":
+            rep.warn(
+                "步骤时间戳单调",
+                f"{len(back)} 处倒退：{back[:3]}"
+                "——手册声明为任务路线组织，时间戳不随步骤递增可接受；"
+                "但请确认每个时间戳确实指向该步的内容",
+                name,
+            )
+        else:
+            rep.error(
+                "步骤时间戳单调",
+                f"{len(back)} 处倒退：{back[:3]}"
+                "——步骤顺序应与视频时间一致；倒退通常意味着时间戳是推测的。"
+                "若本手册确为任务路线组织（时间戳仅作回查凭据），"
+                "在 frontmatter 显式声明 organization: task-routes",
+                name,
+            )
     elif starts:
         rep.ok("步骤时间戳单调", f"{len(starts)} 步顺序正确")
 
@@ -331,6 +346,11 @@ def check_playbook(rep: Report, path: Path) -> None:
     #
     # 重叠只给 WARN：讲者回头补充、一步跨越另一步是可能的。
     # 但重叠超过一步自身长度的一半，通常意味着区间是估的。
+    # 「重叠量」必须按**真区间相交**算：min(两终点) − max(两起点)。
+    # 2026-08-28 修：旧判据是「本步起点 < 上一步终点」就直接取
+    # 「上一步终点 − 本步起点」当重叠量 —— 在**起点倒退**的场景下，
+    # 两个根本不相交的区间（如 [02:43–03:04] 排在 [08:01–09:08] 后）
+    # 被报成「重叠 385s」。量错地方的报告会让人去找不存在的问题。
     spans: list[tuple[str, int, int]] = []
     for b in blocks:
         m = re.search(rf"\[({_TS})\s*[–\-~至]\s*({_TS})\]", b)
@@ -342,10 +362,13 @@ def check_playbook(rep: Report, path: Path) -> None:
             return p[0] * 60 + p[1] if len(p) == 2 else p[0] * 3600 + p[1] * 60 + p[2]
 
         spans.append((m.group(0), _s(m.group(1)), _s(m.group(2))))
-    heavy = [f"{spans[i][0]} 与上一步 {spans[i - 1][0]} 重叠 {spans[i - 1][2] - spans[i][1]}s"
-             for i in range(1, len(spans))
-             if spans[i][1] < spans[i - 1][2]
-             and (spans[i - 1][2] - spans[i][1]) * 2 > (spans[i][2] - spans[i][1])]
+    heavy = []
+    for i in range(1, len(spans)):
+        lo = max(spans[i][1], spans[i - 1][1])
+        hi = min(spans[i][2], spans[i - 1][2])
+        dur = spans[i][2] - spans[i][1]
+        if hi > lo and (hi - lo) * 2 > dur:
+            heavy.append(f"{spans[i][0]} 与上一步 {spans[i - 1][0]} 重叠 {hi - lo}s")
     if heavy:
         rep.warn(
             "步骤区间不重叠",
