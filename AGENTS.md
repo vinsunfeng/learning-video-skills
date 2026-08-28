@@ -13,8 +13,9 @@
 ## 一、先读这几份，顺序不要变
 
 1. **本文件** —— 工作约定、已验证事实、纪律
-2. [`HANDOFF-2026-08-08.md`](./HANDOFF-2026-08-08.md) —— 最近一次停机状态、
+2. [`HANDOFF-2026-08-28.md`](./HANDOFF-2026-08-28.md) —— 最近一次停机状态、
    哪些已验证、哪些**没验证**、下一步顺序
+   （上一份 [`HANDOFF-2026-08-08.md`](./HANDOFF-2026-08-08.md) 的 P0/P1/P2 已全部处理）
 3. [`.claude/skills/video-distill/SKILL.md`](./.claude/skills/video-distill/SKILL.md)
    —— **流程真源**。不要凭别的文档猜它怎么工作
 4. [`HERMES-REAL-RUN.md`](./HERMES-REAL-RUN.md) —— 真实跑一个 29 分钟教程的六轮实验记录
@@ -96,10 +97,15 @@
   V=~/.local/share/uv/tools/watch-skill/bin/python
   for m in onnxruntime rapidocr faster_whisper scenedetect; do $V -c "import $m" || echo "$m 缺"; done
   ```
-- **`--transcript-only` 不写索引**（实测 `list` / `search` 都找不到该视频）⇒
-  阶段 2.1 的语义定 cue 在这条路径上无从做起。**SKILL.md 称阶段 1 为「唯一索引写入点」
-  这句话与实测不符，尚未修**
-- **`fastembed` 未装 ⇒ `search` 退化成纯关键词**（它只打印提示，不报错）
+- **`--transcript-only` 不写索引**（实测 `list` / `search` 都找不到该视频）。
+  源码依据（2026-08-28 核对）：CLI 只在 `result.perception is not None` 时才调
+  `index_watch_result`，而 `--transcript-only` 恒无 perception ⇒ `--index/--no-index`
+  开关在这条路径上是死的。**SKILL.md / references 里「阶段 1 是唯一索引写入点」的
+  旧说法已修**（2026-08-28）：阶段 1 现按内容类型二选一——操作型走不带
+  `--transcript-only` 的带索引 watch，口播型保留快路径并明示不写索引
+- `fastembed` 曾缺失 ⇒ `search` 退化成纯关键词（只打印提示，不报错）。
+  **2026-08-28 实测已装**（补 extras 时 index extra 带上），语义检索真实可用：
+  已索引视频上中文词组命中 0.82–0.88、英文查询命中 OCR 行 0.71+（含跨语言）
 - **非 CUDA 机器的 whisper 默认档是 `base`**，中文技术词错得厉害。已知台词实测（2026-08-08）：
   `base` 错 4 处（自检→字简、索引→所引、产出→传出、不验证→补验证），
   `WATCHSKILL_WHISPER_MODEL=medium` 错 1 处。**`large-v3-turbo` 在 CPU 上尚未验证**
@@ -145,9 +151,13 @@
 ### 3.5 校验与盲测
 
 - `scripts/validate.py` **双向有分辨力**：未填充模板 12 个错误；合格笔记 0 错 0 提醒
-- 已修的三个校验器 bug（都带实测依据，注释里写了原因）：
+- 已修的五个校验器 bug（都带实测依据，注释里写了原因）：
   多行 HTML 注释内的编号行被误计；非 UTF-8 / AppleDouble `._*.md` 抛 traceback；
-  「引用的图片存在」在**零引用时也通过** ⇒ 已加「证据帧非空」
+  「引用的图片存在」在**零引用时也通过** ⇒ 已加「证据帧非空」；
+  起点**倒退**时把「上一步终点 − 本步起点」当重叠量，两个不相交区间被报成
+  「重叠 385s」⇒ 改为真区间相交（2026-08-28）；
+  路线组织的手册（步骤按任务排序、时间戳仅作回查）被单调 ERROR 误杀
+  ⇒ frontmatter `organization: task-routes` 显式声明后降为提醒（2026-08-28）
 - **`validate.py` 满分 ≠ 手册可用。** 它查结构、时间戳、hash，
   **查不出你有没有读对画面**。实测：一份满分手册把
   `"triton-windows>=3.7,<3.8"` 抄成 `"<3.7"`，**约束整个反了**

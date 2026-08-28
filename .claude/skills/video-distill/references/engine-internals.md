@@ -40,10 +40,23 @@ conn.execute("DELETE FROM fts WHERE video_id = ?", (video_id,))
 所以对同一 URL 的每一次带索引 watch 都会清空上一次的成果。分段观看如果每段都索引，
 第 2 段就把第 1 段和全片转录一起删了——检索从此在残缺数据上工作，而且不会报错。
 
-**因此**：阶段 1 全片 `--transcript-only` 是唯一索引写入点，阶段 2 每段都加 `--no-index`。
+**因此**：阶段 2 每段都加 `--no-index`（DELETE 语义不变，见上）。
 
-副作用：索引里只有转录段落，没有 scene / OCR 行。需要画面证据时靠升级阶梯的
-`augment_video()` 按需补——那个函数的注释明确写 "nothing is deleted"，是 ADD 语义，安全。
+但下面这句——本节 2026-08-08 之前的版本、以及当时 SKILL.md 阶段 1 的标题——是**错的**：
+
+> ~~阶段 1 全片 `--transcript-only` 是唯一索引写入点~~
+
+2026-08-28 源码核对 + 实测推翻：CLI 只有在 `result.perception is not None` 时才调用
+`index_watch_result`（`surfaces/cli/main.py`：`if index and result.perception is not None`），
+而 `--transcript-only` 恒无 perception ⇒ **这条路径上 `--index/--no-index` 开关是死的，
+加不加都不写索引**（实测：跑完 `list` / `search` 都找不到该视频；
+`**Indexed:**` 那行也只在真写索引时才打印）。
+
+**正确表述**：唯一能让引擎写索引的，是一次**不带 `--transcript-only`、不带
+`--no-index`** 的 watch。副作用也随之修正：这样写入的不止转录段落，还有
+scene / OCR / embeddings——语义检索正是靠 OCR 行才命中界面文字
+（2026-08-28 实测：真实索引上英文查询命中 `TT-Resolution_selector-Node` 等
+OCR 行，分数 0.71+；中文词组命中 segment + ocr，0.82–0.88）。
 
 ## 2. 带索引的 watch 会静默调用云端视觉
 

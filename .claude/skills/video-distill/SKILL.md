@@ -170,30 +170,54 @@ content_hash = hashlib.sha256(body.strip().encode("utf-8")).hexdigest()[:16]
 
 ---
 
-## 阶段 1 · 全片转录（唯一的索引写入点）
+## 阶段 1 · 全片转录（要不要索引，在这里定）
+
+**先说实测事实（2026-08-28 源码核对 + 实测）**：引擎只有拿到 perception（抽帧+OCR）
+才会写索引 —— CLI 源码是 `if index and result.perception is not None`。
+**`--transcript-only` 恒无 perception ⇒ 这条路径上 `--index/--no-index` 开关是死的，
+加不加都不写索引**（实测：跑完 `list` / `search` 都找不到该视频）。
+本节早期版本称「`--transcript-only` 是唯一索引写入点」——**那是错的**，
+它基于「会写转录段落进索引」的错误认知。详见 references 第 1 节。
+
+所以按内容类型二选一：
+
+**路径 A · 口播 / 理论型（快）**：
 
 ```bash
 env -u ... "$WATCH_SKILL_BIN" watch "<source>" --transcript-only --out-dir "$WORK"
 ```
 
-**这里不加 `--no-index`。** 引擎的 `video_id = sha256(source)` 与时间范围无关，而写索引
-前会 `DELETE` 该 video_id 的所有派生行 —— 所以后续任何带索引的 watch 都会把这次成果清空。
-详见 references 第 1 节。
+只拿转录，不下载视频画面。**不写索引** —— 阶段 2.1 走指示语 + 章节边界降级定 cue。
+
+**路径 B · 操作型 / 界面密集（语义定 cue 的前提）**：
+
+```bash
+env -u ... "$WATCH_SKILL_BIN" watch "<source>" --out-dir "$WORK"
+```
+
+（即：**不 带 `--transcript-only`**。）转录 + 场景帧 + OCR 文本 + 嵌入索引一次拿到；
+阶段 2.1 的 `search` / `ask` 从此可用，且 OCR 行让英文界面词能直接命中
+（2026-08-28 实测：真实索引上英文查询 0.71、中文词组 0.82–0.88）。
+**代价**：全片下载 + 抽帧 + OCR（13.7 分钟视频数分钟 CPU）。
+**纪律**：从此刻起到阶段 2 结束，任何再跑的 watch 一律加 `--no-index` ——
+索引写入前会 `DELETE` 该 video_id 的全部派生行，第二次带索引 watch 会把第一次清空。
 
 完成后：
 
 - 核对字幕轨确实是原生语言（看 `media.*.vtt` 的语言后缀与内容）。不符就显式设
   `WATCHSKILL_SUBTITLE_LANGS` 重跑。不要用机翻英文轨当原文——它是翻译，不是讲者说的话。
 - 转录存档到 `$WORK/transcript.md`（阶段 4 蒸馏的前提，清理 work dir 后不可恢复）。
-- **取 `engine_video_id`**。它不出现在 watch 的输出里（早期版本的 SKILL.md 说去找
-  `Indexed: <id>` 那行 —— 那行不存在，实测 grep 不到）。自己算：
+- **取 `engine_video_id`**。路径 B 下 watch 输出里有 `**Indexed:** video_id` 一行，直接取用；
+  路径 A 下这行**不存在**（没写索引就不打印，实测 grep 不到）。
+  两条路径通用的方法是自算：
 
   ```bash
   python3 -c "import hashlib,sys;print(hashlib.sha256(sys.argv[1].strip().encode()).hexdigest()[:16])" "<source 原样字符串>"
   ```
 
   必须和你传给 watch 的 source 字符串**逐字节一致**（引擎就是 `sha256(source.strip())[:16]`，
-  URL 少一个参数就是另一个 id）。用 `"$WATCH_SKILL_BIN" list` 交叉核对一下。
+  URL 少一个参数就是另一个 id）。路径 B 下可用 `"$WATCH_SKILL_BIN" list` 交叉核对；
+  路径 A 下 `list` 里**不会有它**（不在索引里），别误判成「没跑成」。
   这个值是六条机械契约之一：不落盘、work dir 一清，事后 `ask` / `search` 就只能重跑整条流水线。
 
 ---
@@ -202,7 +226,13 @@ env -u ... "$WATCH_SKILL_BIN" watch "<source>" --transcript-only --out-dir "$WOR
 
 ### 2.1 生成 cue 时间戳表
 
-对索引做语义检索，命中的 hits 自带时间戳：
+**前提：索引存在。** 只有阶段 1 走了路径 B 才有索引。不确定就先 `"$WATCH_SKILL_BIN" list`
+看有没有该视频；没有而内容又确实需要语义定 cue（界面演示、节点操作）⇒ 回去补一次
+阶段 1 路径 B 的全片 watch —— 此时补是**安全的**（路径 A 从没写过索引，没有派生行可被
+DELETE 清掉，下载还有缓存）；纯口播内容直接降级指示语，别为 cue 白跑全片抽帧。
+索引不可用时降级为纯指示语匹配，记入 `degradations`。
+
+索引在，就对它做语义检索，命中的 hits 自带时间戳：
 
 ```bash
 env -u ... "$WATCH_SKILL_BIN" search "操作步骤 点击设置 菜单路径"
