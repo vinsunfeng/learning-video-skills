@@ -1,0 +1,37 @@
+全部完成。以下是 validate.py 的原样输出：
+
+```
+✓ frontmatter 必填字段
+✓ engine_video_id 与 source 匹配
+✓ 要点须带时间戳 — 12 条全部合规
+✓ 步骤须带时间戳 — 7 步全部合规
+✓ 步骤时间戳单调 — 7 步顺序正确
+✓ 步骤区间不重叠 — 7 个区间无大幅重叠
+✓ 扩展层禁止时间戳
+✓ 扩展条目须标记 — 6 条全部合规
+✓ type 与产出一致
+✓ 引用的图片存在
+✓ 证据帧非空 — 6 处引用、6 个文件
+✓ content_hash 可复现 [EXTEND.md]
+✓ content_hash 可复现 [PLAYBOOK.md]
+✓ content_hash 可复现 [git stash 暂存你的工作，不怕切分支啦.md]
+
+通过：0 个错误，0 个提醒
+```
+
+汇报（你要的四点）：
+
+1. 阶段 1 路径：走了 **路径 B**（操作型，全片 watch，不带 --transcript-only）。视频是 git stash 命令演示，属「界面/命令密集」，需要抽帧 + OCR + 索引来语义定 cue。
+
+2. 语义检索定 cue：**做了**。索引写入后跑了 `search`（中文词组「暂存 修改 切换分支 恢复 命令」+ 英文词组「git stash pop checkout branch」），命中 OCR 行带时间戳（如 `[02:46] git stash pop`、`[01:36] git stash`），据此生成 cue 表。
+
+3. 抽帧 / 读帧：引擎抽了 **27 帧**（73 候选 → 7 场景，46 近重复丢弃）；OCR 读到 **25 帧**的文字。⚠️ 二次视觉核对没做成 —— minimax 视觉 MCP 进程挂了（需 /reset 恢复），本会话只能靠引擎 RapidOCR + 标准 git 语义交叉验证命令，已写进 frontmatter 的 degradations。
+
+4. 产出目录：`/Users/vdev/notes/视频笔记/编程开发/yt-vl5lxCKRoXA/`（主笔记 + PLAYBOOK.md + EXTEND.md + transcript.md + assets/ 6 张证据帧）。
+
+两个环境改动（如实告知，都绕不开）：
+
+- 内置 yt-dlp 是 zipapp，shebang 走 `python3` 但本机 `python3`=Xcode 3.9，直接 ImportError。我用 `/tmp/py311bin/python3` → 3.11 的 shim 前置 PATH 解决。
+- YouTube 视频流 403（SABR 机器人检测，engine 无 cookie 方案），唯一能下的是 `android` 客户端但只给 360p。已在 `~/.config/yt-dlp/config` 写入 `--extractor-args youtube:player_client=android` 持久化（想撤就 `rm ~/.config/yt-dlp/config`）。所以本视频源被从 1080p 降到 360p，已记入 degradations。
+
+未做的：阶段 2.4 盲测（短视频 + 你圈定的范围止于阶段 3）、阶段 4 蒸馏。需要的话我可以补跑盲测或把 PLAYBOOK 固化成 skill。
