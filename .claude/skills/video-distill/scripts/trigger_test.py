@@ -85,7 +85,8 @@ def ask(profile: str, skill: str, query: str, timeout: float = 180.0) -> str:
     return " ".join((r.stdout + r.stderr).split())[:240]
 
 
-def ask_claude(skill: str, query: str, timeout: float = 240.0) -> tuple[bool | None, str]:
+def ask_claude(skill: str, query: str, timeout: float = 240.0,
+               model: str | None = None) -> tuple[bool | None, str]:
     """Claude 侧：把**真实的用户原话**发给 `claude -p`，看它是否调用目标 skill。
 
     ## 为什么这条比「问它会不会用」更硬
@@ -113,6 +114,8 @@ def ask_claude(skill: str, query: str, timeout: float = 240.0) -> tuple[bool | N
     claude = Path.home() / ".local/bin/claude"
     cmd = [str(claude), "-p", query, "--output-format", "stream-json",
            "--verbose", "--include-partial-messages"]
+    if model:
+        cmd += ["--model", model]
     env = dict(os.environ)
     env.pop("CLAUDECODE", None)          # 允许在 claude 里嵌套 claude -p
     env.setdefault("LANG", "en_US.UTF-8")
@@ -133,8 +136,14 @@ def ask_claude(skill: str, query: str, timeout: float = 240.0) -> tuple[bool | N
     # > 判据必须锚在「这一次 tool_use 的 input」上，不是「流里出现过这个词」。
     want = re.compile(r'"skill"\s*:\s*"' + re.escape(skill) + r'"')
     t0, in_skill, frag, other = time.time(), False, "", False
+    rate_limited = False
     try:
         for line in proc.stdout:                       # type: ignore[union-attr]
+            # 2026-08-28 实测：月度限额用尽时 CLI 返回 api_error_status=429，
+            # 全程没有任何 tool_use ⇒ 22 条全部「无 Skill 事件」。
+            # 负例因此伪装成 11/11 全过（没测 ≠ 忍住）。必须显式判 None。
+            if '"api_error_status":429' in line or "spend limit" in line:
+                rate_limited = True
             if '"name":"Skill"' in line:
                 in_skill, frag = True, ""              # 新的 Skill 调用，清空分片
             if in_skill:
@@ -148,6 +157,8 @@ def ask_claude(skill: str, query: str, timeout: float = 240.0) -> tuple[bool | N
                 return None, "__TIMEOUT__"
     finally:
         proc.kill()                                    # 不杀会真去干活
+    if rate_limited:
+        return None, "__RATE_LIMITED__"
     return False, "触发了别的 skill" if other else "无 Skill 事件"
 
 
@@ -168,6 +179,9 @@ def main() -> int:
     ap.add_argument("--out", default="/tmp/trigger_test.jsonl")
     ap.add_argument("--backend", choices=["hermes", "claude"], default="hermes",
                     help="hermes = 问自述（快）｜claude = 读真实 tool_use 事件（硬）")
+    ap.add_argument("--model", default=None,
+                    help="claude 后端的模型档（默认模型的月度限额会 429，"
+                         "实测 2026-08-28 haiku/sonnet 可用）；记录进输出")
     a = ap.parse_args()
 
     items = CONTROLS + json.loads(Path(a.eval_set).read_text(encoding="utf-8"))
@@ -177,11 +191,12 @@ def main() -> int:
     rows = []
     for i, it in enumerate(items):
         if a.backend == "claude":
-            v, ans = ask_claude(a.skill, it["query"])
+            v, ans = ask_claude(a.skill, it["query"], model=a.model)
         else:
             ans = ask(a.profile, a.skill, it["query"])
             v = verdict(ans)
-        row = {"i": i, "ctl": it.get("ctl", ""), "expected": it["should_trigger"],
+        row = {"i": i, "ctl": it.get("ctl", ""), "model": a.model or "default",
+               "expected": it["should_trigger"],
                "got": v, "ok": (v == it["should_trigger"]) if v is not None else None,
                "q": it["query"][:50], "ans": ans[:120]}
         rows.append(row)
@@ -209,8 +224,11 @@ def main() -> int:
     neg = [r for r in real if not r["expected"]]
     hit = sum(1 for r in pos if r["ok"])
     hold = sum(1 for r in neg if r["ok"])
+    false_fire = sum(1 for r in neg if r["ok"] is False)   # None 不算误触发：
+    # 2026-08-28 实测 1 条负例超时（agent 埋头干活到 240s），汇总曾把它计成
+    # 「误触发 1」—— 分数会骗人，超时是没有结论，不是没忍住。
     print(f"  该触发 {hit}/{len(pos)} 命中（漏触发 {len(pos) - hit}）")
-    print(f"  不该触发 {hold}/{len(neg)} 忍住（误触发 {len(neg) - hold}）")
+    print(f"  不该触发 {hold}/{len(neg) - len(unread)} 忍住（误触发 {false_fire}）")
     if unread:
         print(f"  ⚠️ {len(unread)} 条读不出结论 —— **不计入任何一边**，"
               f"把它们算成 NO_TRIGGER 会凭空抬高负例分数")

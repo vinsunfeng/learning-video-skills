@@ -10,6 +10,7 @@ video-distill-workspace/
 *.mp3
 *.mp4
 *.wav
+__pycache__/
 
 # ── vendor：第三方代码的本地副本，不进仓库 ──
 # 12M，且是 watch-skill 的副本 —— 同一份代码存在两处，

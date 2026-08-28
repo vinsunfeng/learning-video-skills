@@ -1,0 +1,27 @@
+✓  0 [正对照] 期望=触发 实得=True | 把这个教学视频整理成 obsidian 笔记：https://youtu.be/known-posi
+✓  1 [负对照] 期望=不触发 实得=False | 帮我写一个 Python 快速排序函数，加上单元测试
+✓  2  期望=触发 实得=True | 这个 B 站教程我看了三遍还是记不住 https://www.bilibili.com/video/
+✓  3  期望=触发 实得=True | 帮我把 https://www.youtube.com/watch?v=C05CGMj_LVg 沉淀
+✓  4  期望=触发 实得=True | 我下载了一个 2 小时的 Kubernetes 课程录屏在 ~/Downloads/k8s-cour
+✓  5  期望=触发 实得=True | 刚看完这个 comfyui 安装教学，讲得挺好但步骤太碎了，帮我理成清单存下来 https://yo
+✓  6  期望=触发 实得=True | 这个视频里老师演示的那套 nginx 反代配置，我想留个档，以后自己搭的时候能查 https://w
+✓  7  期望=触发 实得=True | 老板让我把这场技术分享的内容写成团队内部文档，视频链接 https://www.youtube.co
+✓  8  期望=触发 实得=True | 把这个 https://www.bilibili.com/video/BV1xx411c7mD 蒸馏
+✓  9  期望=触发 实得=True | 我在准备一个内部培训，参考了这个 youtube 视频 https://youtu.be/train
+✓ 10  期望=触发 实得=True | 这个 40 分钟的 rust 异步编程讲座我想做成可以搜索的笔记，以后忘了能回去定位到具体第几分钟 
+✓ 11  期望=不触发 实得=False | 这个视频讲的啥？https://www.youtube.com/watch?v=C05CGMj_LV
+✓ 12  期望=不触发 实得=False | 帮我看看 https://youtu.be/xyz111 第 12 分 30 秒左右他点的那个按钮是
+✓ 13  期望=不触发 实得=False | 我这个 ~/Movies/party.mov 有 4 个 G，帮我压到 500M 以内发微信，画质别
+? 14  期望=不触发 实得=None | 把 ~/Downloads/lecture.mp4 里的英文字幕翻译成中文，生成一个 srt 就行，
+✓ 15  期望=不触发 实得=False | 帮我从这个 youtube 播放列表批量下载音频转成 mp3，我通勤路上听 https://www.
+✓ 16  期望=不触发 实得=False | 我这篇长文 ~/Documents/paper-transformer.pdf 帮我整理成 obsi
+✓ 17  期望=不触发 实得=False | 我录了一段屏幕 ~/Desktop/bug-repro.mov，你看看我们那个前端在点提交时到底哪一
+✓ 18  期望=不触发 实得=False | 帮我给这个视频剪个 60 秒的精华片段发小红书，加个字幕条 ~/Movies/demo-full.m
+✓ 19  期望=不触发 实得=False | 我们团队的会议录像 ~/Meetings/2026-08-05.mp4 帮我出个会议纪要，谁负责什么
+✓ 20  期望=不触发 实得=False | 这个教程的 github 仓库在哪？视频简介里好像有，帮我找出来 https://youtu.be/
+✓ 21  期望=不触发 实得=False | 帮我把我 obsidian 里那 30 篇视频笔记按主题重新分类一下，现在全堆在收件箱里了
+
+✓ 两个已知对照都通过，下面的数字才有意义
+  该触发 9/9 命中（漏触发 0）
+  不该触发 10/11 忍住（误触发 1）
+  ⚠️ 1 条读不出结论 —— **不计入任何一边**，把它们算成 NO_TRIGGER 会凭空抬高负例分数
