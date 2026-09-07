@@ -12,6 +12,11 @@ video-distill-workspace/
 *.wav
 __pycache__/
 
+# ── zcode 插件在本机写的状态目录，与项目无关 ──
+# 2026-09-08 发现 video-agent-kit 插件在仓库根留下 .video_agent/
+# （plugin_root 指向插件缓存），永远不该进仓库。
+.video_agent/
+
 # ── vendor：第三方代码的本地副本，不进仓库 ──
 # 12M，且是 watch-skill 的副本 —— 同一份代码存在两处，
 # 副本一定会漂移，而漂移的那一刻没人会知道。
