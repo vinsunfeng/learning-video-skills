@@ -516,8 +516,9 @@ $NOTES_ROOT/<分类>/<slug>/
   3. 环境契约：cangjie 脚本依赖 PyYAML 且文档未声明——系统 python 下连 `doctor` 都起不来；
      本机用 watch-skill venv 的 python（自带 yaml）执行 `scripts/cangjie.py`。
   4. 编译产物装机到 `~/.claude/skills/<name>/`（Hermes 则带 category 层）。编译器硬闸门
-     会拦断链产物且首编常见一个坑：`also_read` 要写 **slug** 而非 capability_id
-     （上游文档与实现契约不一致，已识别待报 issue）。
+     会拦断链产物；`also_read` 建议**写 slug**（capability_id 形态在未打补丁的机器上
+     会被拦——上游文档与实现契约不一致，本机已在 clone 的 `local-patches` 分支修复，
+     双形态兼容，待报上游 issue/PR）。
   5. 装机后必补触发测试（`scripts/trigger_test.py`，双对照纪律不变）——
      这是整条「视频 → skill」链路目前唯一未闭环的一环。
 - **操作型** → PLAYBOOK 固化为项目内 skill（写 SKILL.md frontmatter + 带排除清单的触发
