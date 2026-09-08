@@ -115,14 +115,15 @@
 
 | | Claude Code CLI | Hermes + deepseek |
 |---|---|---|
-| 直接读图 | ✅ `Read` 帧 | ❌ **无原生图片读取**，必须绕 `mcp__minimax__understand_image`（已实测可用：逐字读出画面三行文字、认对颜色形状） |
+| 直接读图 | ✅ `Read` 帧 | **配置决定**（2026-09-08 实测）：profile 配 `auxiliary.vision`（`deepseek-v4-flash-vision-exp`，注意 `deepseek-v4-vision-exp` API 不认）后**可直接读帧**，面板/字幕分层质量经主代理亲读对答案验证；**新 profile 默认未配** ⇒ 表现为「无视觉模型」只靠 OCR（历史绕法：`mcp__minimax__understand_image`，亦实测可用）。配置法与仪器检查判据见 `HERMES-INSTALL.md` §〇 |
 | 真实工具轨迹 | ✅ `--output-format stream-json` 能拿到 `tool_use` | ❌ **`-z` 的 session 不落库** ⇒ 至今无法证明它读没读那 5 张帧 |
 | 触发「这视频讲了啥」 | **0 次 Skill 事件**（正确不触发；同刻正例 2 次） | **3/3 误触发** |
-| 出四件套耗时 | 触发到 Skill 事件 **75s+**，负例跑到超时 | **4:15 / 6:40** |
-| 认证 | 会过期（401），`auth status` 谎报 | provider 配好一直可用 |
+| 出四件套耗时 | 触发到 Skill 事件 **75s+**，负例跑到超时 | **4:15 / 6:40**（2026-09-08 无字幕 360p 源全流程约 30 分钟） |
+| 认证 | 会过期（401），`auth status` 谎报 | provider 配好一直可用；**新 profile 的 `.env` 是空模板，凭证不继承**（复制能跑 profile 的 `.env`，见 HERMES-INSTALL §〇） |
 
 > **SKILL.md 阶段 2 曾写「subagent 内 `Read` 每个帧路径」——
-> 那句话默认了 agent 能吃图，Claude 能，Hermes 不能。已加对照表修正。**
+> 那句话默认了 agent 能吃图，Claude 能，Hermes 不能（当时）。已加对照表修正；
+> 2026-09-08 起 Hermes 能力随配置而变，对照表改为「先查配置再假设」。**
 
 分工建议（2026-08-28 更新）：**日常批处理/验证默认用 hermes / opencode / reasonix** ——
 claude CLI 走用户 Anthropic 账号的按模型月度额度，已撞 429 上限，**只在与 claude 本身
