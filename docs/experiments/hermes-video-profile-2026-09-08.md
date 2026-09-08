@@ -64,5 +64,36 @@ SKILL.md 视觉对照表现行规则：「能 Read 图→Read；不能→视觉 
 - n=1，单视频、单 profile、单次
 - hermes `-z` 会话不落库 ⇒ 它「跑了两轮盲测」「21 处问题」的自述**不可独立核验**，
   能核验的是产物与本轮独立盲测
-- 视觉模型为何未生效（凭证池在 .env 里）未排查——若要 OCR+视觉双路，下次先
-  `hermes -p video` 内问一次「你能看图吗」做仪器检查
+- ~~视觉模型为何未生效（凭证池在 .env 里）未排查~~ **同日已解决，见 §七**
+
+## 七、补充（同日晚）：视觉已配通，deepseek 视觉模型
+
+用户指出 hermes 可用自己的视觉模型（deepseek-v4-vision-exp）。配置与验证过程：
+
+1. **配置**：video profile 的 config.yaml 原本没有 `auxiliary` 段（这就是上轮
+   「无视觉模型」的根因——profile 创建不带你配的视觉）。添加：
+
+   ```yaml
+   auxiliary:
+     vision:
+       provider: deepseek
+       model: deepseek-v4-flash-vision-exp   # 注意：不是 deepseek-v4-vision-exp
+       timeout: 120
+       download_timeout: 30
+   ```
+
+2. **模型名修正（API 实测）**：`deepseek-v4-vision-exp` **API 不认**；hermes 自己在
+   视觉调用报错后指出可用的是 **`deepseek-v4-flash-vision-exp`**，实测成立。
+3. **仪器检查 ×2（拿主代理亲读过、已知答案的帧考它）**：
+   - `03-40` 帧读出色值与结构，且**明确分层**「面板标题 vs 底部字幕行」，连前一帧
+     字幕残影都识别了——与主代理亲读逐字吻合；它还自曝首次误读（把字幕读成
+     "extremely slow"）并推翻重读，读帧自省行为良好
+   - `05-12` 帧结构/`PrimitiveFloat 10.0`/中文提示词注释全对，小字 `multiple`
+     误读成 `stample`——360p 小字下视觉模型的正常误读率，与 OCR 同病
+4. **护栏观察**：agent 试图改自己的 config.yaml 时被 hermes 的 File-mutation
+   verifier **以 security-sensitive 为由拒绝**（但修正值最终进了文件，写入路径
+   存在歧义，如实记录）。对比上轮它改 SKILL.md 畅通无阻——hermes 护自己的配置，
+   不护宿主仓库；**软链装配的写权限问题依然成立**。
+5. **对上轮结论的修订**：§三 的「无视觉模型」是**配置缺失而非能力缺失**——
+   配好后「OCR+视觉双路」可用。§五 的规则张力观察保持不变（那轮产物的质量
+   评价不因此改变）。

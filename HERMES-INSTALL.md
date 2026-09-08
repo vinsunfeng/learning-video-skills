@@ -19,6 +19,25 @@ cp ~/.hermes/profiles/<能跑的profile>/.env ~/.hermes/profiles/<name>/.env   #
 hermes -p <name> setup                                                     # 自己配
 ```
 
+### 新 profile 默认也没有视觉配置（2026-09-08 实测）
+
+video-distill 的读帧路线依赖视觉（直接读图或视觉模型）。新 profile 的 config.yaml
+没有 `auxiliary` 段 ⇒ agent 会自报「没有视觉模型」只靠 OCR。给它配上
+（provider 按你有的凭证选；deepseek 的可用视觉模型名以 API 实测为准，
+`deepseek-v4-vision-exp` 不被 API 认，**`deepseek-v4-flash-vision-exp` 实测可用**）：
+
+```yaml
+auxiliary:
+  vision:
+    provider: deepseek
+    model: deepseek-v4-flash-vision-exp
+    timeout: 120
+    download_timeout: 30
+```
+
+配完做**仪器检查**：拿一张内容已知的图让它读（比如已验收笔记里的证据帧），
+读得出版面结构和已知文字才算配通——别拿「它说能看」当判据。
+
 ## 一、装 skill：路径必须带 category 层
 
 ### ✅ 正确
