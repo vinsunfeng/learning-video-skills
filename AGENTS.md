@@ -13,9 +13,10 @@
 ## 一、先读这几份，顺序不要变
 
 1. **本文件** —— 工作约定、已验证事实、纪律
-2. [`HANDOFF-2026-08-28.md`](./HANDOFF-2026-08-28.md) —— 最近一次停机状态、
+2. [`HANDOFF-2026-09-08.md`](./HANDOFF-2026-09-08.md) —— 最近一次停机状态、
    哪些已验证、哪些**没验证**、下一步顺序
-   （上一份 [`HANDOFF-2026-08-08.md`](./HANDOFF-2026-08-08.md) 的 P0/P1/P2 已全部处理）
+   （上一份 [`HANDOFF-2026-08-28.md`](./HANDOFF-2026-08-28.md) 的下一步建议已全部处理，
+   其开放项的关闭情况在新一份里有逐条对账）
 3. [`.claude/skills/video-distill/SKILL.md`](./.claude/skills/video-distill/SKILL.md)
    —— **流程真源**。不要凭别的文档猜它怎么工作
 4. [`HERMES-REAL-RUN.md`](./HERMES-REAL-RUN.md) —— 真实跑一个 29 分钟教程的六轮实验记录
@@ -165,8 +166,9 @@ claude CLI 走用户 Anthropic 账号的按模型月度额度，已撞 429 上�
 - **`validate.py` 满分 ≠ 手册可用。** 它查结构、时间戳、hash，
   **查不出你有没有读对画面**。实测：一份满分手册把
   `"triton-windows>=3.7,<3.8"` 抄成 `"<3.7"`，**约束整个反了**
-- 所以操作型笔记**必做盲测**：`scripts/blind_prep.py <笔记目录> /tmp/blind`，
+- 所以操作型笔记**必做盲测**：`scripts/blind_prep.py <笔记目录> video-distill-workspace/blind`，
   然后交给一个**干净的 subagent**，禁止它上网、禁止读隔离目录外的文件
+  （隔离目标别放 /tmp——§2.5 的教训对它同样适用）
 
 ### 3.6 阶段 4 蒸馏路线（cangjie-skill，2026-09-08 实测）
 

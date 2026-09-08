@@ -147,11 +147,24 @@ agent failed: Model ... has a context window of 16,384 tokens,
 which is below the minimum 64,000 required by Hermes Agent.
 ```
 
-或 `No LLM provider configured`。
+或 `No LLM provider configured`，或（2026-09-08 实测新增）：
 
-**这两条跟 skill 一点关系都没有** —— Hermes agent 要求模型
-**至少 64K 上下文**，指向小上下文的本地模型时它根本起不来。
-**别把它读成「装失败了」**，改用判据二。
+```
+agent failed: No usable credentials found for provider 'deepseek'. Set DEEPSEEK_API_KEY.
+```
+
+**三条都跟 skill 一点关系没有** —— 前两条是模型上下文/provider 没配；
+第三条是**新建 profile 的 `.env` 是空模板，凭证不继承**（2026-09-08 实测），
+复制一个能跑的 profile 的 `.env` 即可：
+
+```bash
+cp ~/.hermes/profiles/<能跑的profile>/.env ~/.hermes/profiles/$PROFILE/.env
+```
+
+**别把它们读成「装失败了」**，改用判据二。视觉模型也要单独配
+（新 profile 默认没有 `auxiliary.vision`，做法与实测可用的模型名见
+[`HERMES-INSTALL.md`](./HERMES-INSTALL.md) §〇），配完拿一张已知内容的帧
+考它——「能读图」以仪器检查为准，不以 agent 自述为准。
 
 ### 2c. 成本：装 skill 是要付常驻费的
 

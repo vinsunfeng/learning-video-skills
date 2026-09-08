@@ -176,7 +176,9 @@ def main() -> int:
     ap.add_argument("eval_set")
     ap.add_argument("--profile", default="wiki")
     ap.add_argument("--skill", default="video-distill")
-    ap.add_argument("--out", default="/tmp/trigger_test.jsonl")
+    ap.add_argument("--out", default="video-distill-workspace/trigger_test.jsonl",
+                    help="结果落盘路径。默认不放 /tmp——2026-08-08 一轮 20 条对比"
+                         "测试的日志与结果被 /tmp 清空全部丢失（AGENTS.md §2.5）")
     ap.add_argument("--backend", choices=["hermes", "claude"], default="hermes",
                     help="hermes = 问自述（快）｜claude = 读真实 tool_use 事件（硬）")
     ap.add_argument("--model", default=None,

@@ -436,11 +436,12 @@ OCR 自己也会错（「拆解」→「折解」、「剧本」→「刷本」�
 > 一个被列为必做、却从没被定义过的步骤。2026-08-08 补。
 
 ```bash
-python3 <skill_dir>/scripts/blind_prep.py "<笔记目录>" /tmp/blind
+python3 <skill_dir>/scripts/blind_prep.py "<笔记目录>" video-distill-workspace/blind
 # 隔离出一份看不到答案的副本（只留 PLAYBOOK.md、移除截图嵌入），并打印标准提示词
+# 隔离目标别放 /tmp —— §固化配置外的纪律：中间产物放 /tmp 会被系统清掉（2026-08-08 丢过整轮数据）
 ```
 
-把 `/tmp/blind` 交给一个**干净的 subagent**，用脚本打印的提示词。
+把隔离目录交给一个**干净的 subagent**，用脚本打印的提示词。
 **必须禁止它上网、禁止它读隔离目录以外的文件** ——
 **一个能偷看的盲测，测的是偷看能力。**
 
