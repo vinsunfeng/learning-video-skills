@@ -3,6 +3,22 @@
 这份文档是给**另一个 agent** 读的。照做就行，每步都带**验证方法** ——
 装完不验证，等于没装。
 
+## 〇、新建 profile 时：凭证不继承（2026-09-08 实测）
+
+`hermes profile create <name>` 生成全套目录，但 **`.env` 只有 3 行空模板**——
+不继承全局 `~/.hermes/.env`，也不继承其他 profile 的凭证。此时问 agent 会报：
+
+```
+hermes -z: agent failed: No usable credentials found for provider 'deepseek'. Set DEEPSEEK_API_KEY.
+```
+
+**这跟 skill 毫无关系，别读成「装失败了」。** 修法二选一：
+
+```bash
+cp ~/.hermes/profiles/<能跑的profile>/.env ~/.hermes/profiles/<name>/.env   # 快路径
+hermes -p <name> setup                                                     # 自己配
+```
+
 ## 一、装 skill：路径必须带 category 层
 
 ### ✅ 正确
