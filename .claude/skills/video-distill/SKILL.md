@@ -500,13 +500,28 @@ $NOTES_ROOT/<分类>/<slug>/
 
 ---
 
-## 阶段 4 · 可选蒸馏（默认不执行）
+## 阶段 4 · 可选蒸馏（默认不执行，征询用户）
 
-处理完成后由用户决定：
+处理完成后由用户决定。分流按阶段 2.5 的类型判定：**操作内容走 PLAYBOOK 固化，方法论内容
+走 cangjie**——两条路线不混用，也不必都跑（cangjie 与本 skill 是上下游关系，各自独立迭代，
+经 transcript 契约衔接，勿把它的流程并入本文档）。
 
-- **方法论型** → cangjie-skill 蒸馏成技能包。输入必须是 `transcript.md` **原始转录**，
-  不是笔记 —— cangjie 的三重验证要求「原文至少 2 处独立佐证」，总结性笔记会让验证失效。
-- **操作型** → PLAYBOOK 固化为项目内 skill。
+- **方法论型 / 混合型的方法论部分** → cangjie-skill 蒸馏成技能包。交接契约
+  （2026-09-08 对全新视频全流程实测，记录见仓库 `docs/experiments/cangjie-stage4-2026-09-08.md`）：
+  1. 输入只有 `transcript.md` **原始转录**，不是笔记 —— cangjie 的 V1 验证要求「原文至少
+     2 处独立佐证」，笔记是二次压缩产物：两处「佐证」可能是同一时刻的两次转述（V1 假阳性），
+     笔记的遗漏会被当成原文的完整（覆盖率门失效）。时间戳转录正好充当能力卡
+     `source_evidence` 的定位凭据。
+  2. 随转录交三样元信息：**标题 + 作者 + 发布日期**（目录命名与审计用）。
+  3. 环境契约：cangjie 脚本依赖 PyYAML 且文档未声明——系统 python 下连 `doctor` 都起不来；
+     本机用 watch-skill venv 的 python（自带 yaml）执行 `scripts/cangjie.py`。
+  4. 编译产物装机到 `~/.claude/skills/<name>/`（Hermes 则带 category 层）。编译器硬闸门
+     会拦断链产物且首编常见一个坑：`also_read` 要写 **slug** 而非 capability_id
+     （上游文档与实现契约不一致，已识别待报 issue）。
+  5. 装机后必补触发测试（`scripts/trigger_test.py`，双对照纪律不变）——
+     这是整条「视频 → skill」链路目前唯一未闭环的一环。
+- **操作型** → PLAYBOOK 固化为项目内 skill（写 SKILL.md frontmatter + 带排除清单的触发
+  描述，装机后同样补触发测试。此路线尚无实测记录，首个试点可用任一现有 PLAYBOOK）。
 
 **清理时序**：证据帧已拷 assets、transcript 已存档、用户无追加问题 → 才允许清理
 `$WORK`。引擎自己的下载缓存由 LRU 管理，不要手动删。
