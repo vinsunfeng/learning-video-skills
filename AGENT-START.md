@@ -228,7 +228,8 @@ uv tool install --force --python 3.11 --with psutil --with mlx-whisper --editabl
 ```
 
 **补丁是可选加速，不打也能跑**；非 Apple Silicon 不要打。
-2026-08-08 对上游最新版实测 `git apply --check` **通过**。
+2026-08-08 对**当时的**上游版实测 `git apply --check` **通过**
+（PyPI 现为 1.4.3，补丁对其是否干净 apply 未复测——失败就用上方基线安装，功能一样）。
 
 > **「装过了」这件事必须能被检查** ——
 > 否则每个新会话都要重装一遍才敢用。
