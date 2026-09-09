@@ -78,18 +78,23 @@ git clone https://github.com/vinsunfeng/learning-video-skills.git "$REPO"
 ### 2a. 装给 Claude（Claude Code / Cowork）
 
 ```bash
+mkdir -p ~/.claude/skills
 ln -sfn "$REPO/.claude/skills/video-distill" ~/.claude/skills/video-distill
 ```
 
 **验证**：新开一个会话，问「你有 video-distill 这个 skill 吗」。
+（诚实声明：Claude 侧**没有**不依赖 LLM 的验证判据——Hermes 的判据二
+`prompt-size` park/restore 在 Claude 这边没有等价物，且 `claude auth status`
+会谎报。LLM 不可用的机器上，只能验到「软链存在且目标可读」为止，
+这是已知的不对称，不是你能修的缺陷。）
 
 ### 2b. 装给 Hermes agent
 
 **路径必须带 `<category>` 那一层**，少了就认不到：
 
 ```bash
-PROFILE=wiki          # 换成你的 profile 名
-CATEGORY=note-taking  # 见 ls ~/.hermes/profiles/$PROFILE/skills/
+PROFILE=<name>        # 你的 profile 名（hermes profile create <name> 创建）
+CATEGORY=note-taking  # 见 ls ~/.hermes/profiles/$PROFILE/skills/（create 会预建分类目录）
 
 ln -sfn "$REPO/.claude/skills/video-distill" \
         ~/.hermes/profiles/$PROFILE/skills/$CATEGORY/video-distill
@@ -129,9 +134,9 @@ hermes -p $PROFILE -z '你的 skills 里有没有 video-distill？
 
 ```bash
 hermes -p $PROFILE prompt-size | grep "skills index"   # 记下数字
-mv ~/.hermes/profiles/$PROFILE/skills/$CATEGORY/video-distill /tmp/vd-parked
+mv ~/.hermes/profiles/$PROFILE/skills/$CATEGORY/video-distill $HOME/vd-parked
 hermes -p $PROFILE prompt-size | grep "skills index"   # 应当变小
-mv /tmp/vd-parked ~/.hermes/profiles/$PROFILE/skills/$CATEGORY/video-distill
+mv $HOME/vd-parked ~/.hermes/profiles/$PROFILE/skills/$CATEGORY/video-distill
 hermes -p $PROFILE prompt-size | grep "skills index"   # 应当精确回到原值
 ```
 
@@ -188,6 +193,8 @@ hermes -p $PROFILE prompt-size | grep "skills index"
 ```bash
 uv tool install --python 3.11 "watch-skill[perceive,ocr,whisper,index]"
 watch-skill doctor    # 它会说缺什么，并**自动补** deno / ffmpeg / yt-dlp
+                      # （deno/yt-dlp 自补有 Fedora 实测；裸 Fedora 的 ffmpeg 自补无记录，
+                      #  装不上就先 `dnf install ffmpeg`（RPM Fusion）再跑 doctor）
 ```
 
 > ⚠️ **`watch-skill` 在 PATH 里，不等于它能干活。**
@@ -205,9 +212,10 @@ watch-skill doctor    # 它会说缺什么，并**自动补** deno / ffmpeg / yt
 > 上面那条 `uv tool install` **不会因为「已经装过」就跳过 extras**（已实测补齐）。
 > 所以：**照跑一次，不要因为命令已存在就略过这一步。**
 
-**钉 3.11，不要用系统 Python**，也**不要** `curl install.sh | sh`
-（它会挑系统 Python）。理由见 `README.md`：这套栈全是二进制轮子，
-`onnxruntime` 是硬门槛。
+**钉 3.11，不要用系统 Python**，也**不要用 watch-skill 自带的**
+`curl install.sh | sh`（它会挑系统 Python；uv 官方安装脚本无此问题，
+uv 本体没装就 `curl -LsSf https://astral.sh/uv/install.sh | sh`）。
+理由见 `README.md`：这套栈全是二进制轮子，`onnxruntime` 是硬门槛。
 
 **Apple Silicon 想要加速**（转录走 GPU、OCR 走 CoreML）：
 
@@ -261,6 +269,13 @@ export WATCHSKILL_WHISPER_MODEL=large-v3-turbo   # 或 medium，看机器扛不�
 
 读 `.claude/skills/video-distill/SKILL.md` —— 那是**流程真源**，
 不要凭这份安装单去猜它怎么工作。
+
+**换机器部署，先本地化 SKILL.md「固化配置」里的两行**（2026-09-08 标注）：
+`WATCH_SKILL_BIN`（用 `command -v watch-skill` 查实际位置）和 `VAULT`
+（你的 Obsidian 笔记库，不存在就先建 `视频笔记/` 子目录）。这是全文档
+仅有的两处本机路径，其余命令都引用变量——改这两行即可。
+skill 的三个验收脚本只用 Python 标准库，任何 3.11+ 环境直接能跑；
+引擎在非 Apple 机器上不打补丁也能跑（代价见第 3 步的模型档位说明）。
 
 产出是三件套：带时间戳的主笔记、可脱离视频复现的 PLAYBOOK、
 与视频原文严格分离的扩展阅读。

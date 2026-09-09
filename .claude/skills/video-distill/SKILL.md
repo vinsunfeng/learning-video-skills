@@ -80,6 +80,11 @@ Hermes 那边的理由每次都类似：「video-distill 正是做 YouTube 摘�
 
 ## 固化配置
 
+> ⚠️ **换机器部署先本地化这两行**（2026-09-08 标注）：`WATCH_SKILL_BIN` 与 `VAULT`
+> 是**本机**的绝对路径，别的机器必须改成自己的（`watch-skill` 的实际位置用
+> `command -v watch-skill` 查；vault 目录不存在就先建，含 `视频笔记/` 子目录）。
+> 后文所有命令只引用这里的变量——改这里即可，别处没有硬编码。
+
 ```bash
 WATCH_SKILL_BIN=/Users/vdev/.local/bin/watch-skill   # 绝对路径：subagent 的 PATH 不保证含 ~/.local/bin
 VAULT=/Users/vdev/notes                              # 已确认，支持 Bases
@@ -101,7 +106,7 @@ env -u ANTHROPIC_API_KEY -u OPENAI_API_KEY -u GEMINI_API_KEY -u OPENROUTER_API_K
 |---|---|
 | `env -u ...KEY` | 带索引的 watch 会用 Haiku 描述最多 24 帧且**不检查 cost_policy**，有 key 就静默付费 |
 | `SUBTITLE_LANGS='zh.*'`（不带 en） | 多数视频 info.json 的 `language` 为 None，字幕轨按字母序回落，`media.en.vtt` 会压过 `media.zh.vtt`，拿机翻轨当原文 |
-| `WHISPER_MODEL` 显式指定 | 内存探测失败会落到 `base`，中文错字密集（「多参考图」→「多餐口圖」），不能用于笔记 |
+| `WHISPER_MODEL` 显式指定 | 内存探测失败会落到 `base`，中文错字密集（「多参考图」→「多餐口圖」），不能用于笔记。`large-v3-turbo` 是 **Apple Silicon（mlx）实测档**；**非 CUDA 的 Linux/CPU 机器改 `medium`**（large-v3-turbo 在 CPU 未测，medium 实测简体准确但 RTF 0.62x），见 AGENT-START §3 |
 
 英文视频临时改 `WATCHSKILL_SUBTITLE_LANGS='en.*'`。详见 references 第 2、3、5 节。
 
@@ -166,7 +171,8 @@ content_hash = hashlib.sha256(body.strip().encode("utf-8")).hexdigest()[:16]
    `height<=720` 且不接受 cookie，要看清代码请给本地高清文件」。等下载完才发现会白费一次下载。
 5. **打包成一次确认**：字幕来源、分段方案、抽帧分辨率、预计耗时、是否启用 WebSearch 扩展。
    ≥20 分钟且有章节 → 给章节地图让用户选精看范围。
-   转录耗时按 RTF 0.05x 估；不要报「转录费用」，本地转录免费。
+   转录耗时按 RTF 0.05x 估（Apple Silicon mlx 实测值；CPU `medium` 实测 0.62x，
+   约 12 倍，按本机档位换算）；不要报「转录费用」，本地转录免费。
 
 ---
 

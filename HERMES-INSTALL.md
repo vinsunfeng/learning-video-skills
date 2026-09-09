@@ -97,9 +97,9 @@ hermes -p <profile> -z '你的 skills 里有没有 <skill-name>？
 
 ```bash
 hermes -p $P prompt-size | grep "skills index"    # 记下
-mv <软链> /tmp/vd-parked
+mv <软链> $HOME/vd-parked
 hermes -p $P prompt-size | grep "skills index"    # 应当变小
-mv /tmp/vd-parked <软链>                          # 应当精确回到原值
+mv $HOME/vd-parked <软链>                          # 应当精确回到原值
 ```
 
 2026-08-08 Fedora 机器实测：**7,921 → 8,059 B（+138），拿掉即回落**。

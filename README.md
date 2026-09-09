@@ -82,7 +82,14 @@ watch-skill doctor
 > 那是一条跑不通的指令，而**文档里跑不通的指令比没有文档更糟**。
 
 为什么钉 3.11：这套栈全是二进制轮子，`onnxruntime` 是硬门槛。
-**不要用 `curl install.sh | sh`** —— 它会挑系统 Python。
+**不要用 watch-skill 自带的 `curl install.sh | sh`** —— 它会挑系统 Python
+（uv 官方的安装脚本无此问题）。uv 本体没装的话：
+`curl -LsSf https://astral.sh/uv/install.sh | sh`，或发行版包管理器（Fedora `dnf install uv`）。
+
+> 前置工具速查：**uv**（见上）、**ffmpeg**（`doctor` 自动补 deno/yt-dlp 有实测；
+> 裸 Fedora 能否自补 ffmpeg 无记录，装不上就 `dnf install ffmpeg`）、
+> **hermes CLI**（可选，装 Hermes 侧才需要——外部独立项目，本仓库不负责其安装；
+> 下文凭证/视觉行为实测于 v0.21.0）。
 
 ### 2. 首次运行会下载的模型
 
@@ -92,6 +99,9 @@ watch-skill doctor
 | `paraphrase-multilingual-MiniLM-L12-v2` | 130 MB | 多语言嵌入，检索用 |
 | RapidOCR PP-OCR 模型 | 随 ocr extra 附带 | 画面文字（含中日文） |
 
+（上表为 Apple Silicon 路径；Linux/CUDA 机器由引擎按 GPU 选档，纯 CPU 机器见
+AGENT-START §3 的模型档位说明——默认档中文质量不可用，必须显式降档。）
+
 首次准备约 15~25 分钟。HF 未认证限速停滞时设 `HF_TOKEN` 或用
 `huggingface_hub.snapshot_download(..., max_workers=4)` 续传。
 
@@ -99,11 +109,12 @@ watch-skill doctor
 
 ```bash
 # Claude
+mkdir -p ~/.claude/skills
 ln -sfn "$REPO/.claude/skills/video-distill" ~/.claude/skills/video-distill
 
 # Hermes：路径必须带 <category> 层，且新 profile 的 .env 是空模板（凭证不继承）
-hermes profile create <name>
-cp ~/.hermes/profiles/<能跑的profile>/.env ~/.hermes/profiles/<name>/.env
+hermes profile create <name>        # 会预建 skills/<category> 分类目录（v0.21 实测）
+hermes -p <name> setup              # 冷启动配凭证走这条；已有能跑 profile 时 cp 其 .env 更快
 ln -sfn "$REPO/.claude/skills/video-distill" \
         ~/.hermes/profiles/<name>/skills/note-taking/video-distill
 ```
@@ -188,8 +199,11 @@ env -u ANTHROPIC_API_KEY -u OPENAI_API_KEY -u GEMINI_API_KEY -u OPENROUTER_API_K
 2. [`AGENT-START.md`](./AGENT-START.md) —— 别的机器上的 agent 自助安装
 3. [`.claude/skills/video-distill/SKILL.md`](./.claude/skills/video-distill/SKILL.md) —— **流程真源**
 4. [`AGENTS.md`](./AGENTS.md) —— 工作约定与已验证事实（四档用词：已验证/观察到/推断/尚未验证）
-5. [`HANDOFF-2026-08-28.md`](./HANDOFF-2026-08-28.md) —— 最近停机状态与下一步
+5. [`HANDOFF-2026-09-08.md`](./HANDOFF-2026-09-08.md) —— 最近停机状态与下一步（各开放项对账见其中）
 6. `docs/experiments/` —— 每次实验的原始记录
+
+> 安装顺序说明：本节按「引擎 → skill」编号，而 AGENT-START §0 建议「先装 skill
+> 再装引擎」（先知道装的东西拿来干什么）。两种顺序都装得起来，按你的习惯选。
 
 ## 退路
 
