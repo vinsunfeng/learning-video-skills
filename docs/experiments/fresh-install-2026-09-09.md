@@ -23,6 +23,10 @@
 
 1. **homebrew ffmpeg 没有 drawtext 滤镜**（`Filter not found`）——以后造合成测试片，
    用 watch-skill venv 自带的 Pillow 渲染 PNG 再 loop 成视频（本次走的路，脚本三行）。
+   根因实测：9.0.1 bottle 的 configuration 行没有 `--enable-libfreetype`。
+   ⚠️ 复核时差点反转：`grep "drawtext|drawgraph"` 会命中 **drawgraph** 而误判
+   「其实存在」——AGENTS.md §2.4「会自己命中的过滤器」又一例；真判据是
+   **直接调用**（`No such filter: 'drawtext'`）或读 configuration 行。
 2. doctor 在 1.4.3 会提示 mcp/loop/api 可选 extras——本流水线用不到，warn 可忽略。
 
 ## 结论与边界
