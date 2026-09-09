@@ -599,4 +599,7 @@ $NOTES_ROOT/<分类>/<slug>/
 
 - `templates/NOTES.md` · `templates/PLAYBOOK.md` · `templates/EXTEND.md` — 产出模板，填空用
 - `scripts/validate.py` — 分层校验，阶段 3 必跑
+- `scripts/blind_prep.py` — 盲测隔离器（阶段 2.4），只留 PLAYBOOK 并打印标准提示词
+- `scripts/trigger_test.py` — 触发准确性（阶段 4 装机后必跑，强制已知对照）
+- `evals/trigger-evals.json`（9 正 / 11 负）· `evals/evals.json` — 触发与执行评测样例
 - `references/engine-internals.md` — 引擎内部行为与实测数据。想改动上面任何一条规则前先读它

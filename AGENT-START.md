@@ -40,7 +40,7 @@ git clone https://github.com/vinsunfeng/learning-video-skills.git "$REPO"
 ```
 
 **验证**：`ls "$REPO/.claude/skills/video-distill/SKILL.md"` —— 文件在才算拉到。
-体积约 1.1 MB（2026-08-08 实测），几秒钟。
+体积约 704 KB（2026-09-09 实测 `--depth 1` 浅 clone；旧记录「1.1 MB」是 08-08 的数字，仓库持续在长），几秒钟。
 
 ### ~~路 C：一条命令装进 Hermes~~ —— **实测不可用，别走**
 
@@ -259,10 +259,10 @@ export WATCHSKILL_WHISPER_MODEL=large-v3-turbo   # 或 medium，看机器扛不�
 
 | 项 | 说明 |
 |---|---|
-| 转录 | 装 `mlx-whisper` 后端明显更快（Apple Silicon） |
-| OCR | RapidOCR 开 CoreML 后明显更快 |
+| 转录 | 装 `mlx-whisper` 后端明显更快（Apple Silicon，实测 RTF 0.05x vs CPU 0.62x） |
+| OCR | RapidOCR 开 CoreML **只有边际收益**——实测同一 ROI 中位 324ms vs 纯 CPU 355ms，**约 9%**（模型动态形状，多数子图仍回退 CPU），不要按「GPU 加速」预期 |
 
-细节见 `README.md` 与 `docs/`。
+细节见 `README.md`、`patches/README.md` 与 `references/engine-internals.md` §8–9。
 
 ---
 

@@ -181,6 +181,9 @@ Skills by size:
   <name>   SKILL.md 大小   index 成本
 ```
 
+（7,185 B 是早期示意数字；实际随 profile 不同——2026-09-09 实测一个新 profile 为 5,801 B，
+装 video-distill 后 5,801 → 5,663 差 138 B。）
+
 - **index 是常驻的**（所有调用都付）
 - **`SKILL.md` 只在被触发时才读**（一次性）
 
@@ -192,14 +195,14 @@ Skills by size:
 skill 需要的外部依赖（模型权重、CLI 工具）**不要塞进 skill 目录**，
 而是在 `SKILL.md` 里写清「怎么检查、怎么装」，让 agent 自己确认环境。
 
-范式（`video-distill` 就是这么做的）：
+范式（`video-distill` 的 SKILL.md 里叫 **Preflight**，就是这么做的）：
 
 ```markdown
-## 环境自检（先跑这个，缺了再装）
+## Preflight（会话内首次运行做一遍）
 
-    watch-skill doctor       # 检查 ffmpeg / yt-dlp / deno / 模型权重
+    watch-skill doctor    # ffmpeg / yt-dlp / deno / js-runtime 必须全 ok
 
-缺什么它会说。**装之前先跑一次，不要假设环境干净。**
+失败就停下报告，不要降级硬跑。**装之前先跑一次，不要假设环境干净。**
 ```
 
 理由：模型权重几个 GB，进 git 会毁掉仓库；而
