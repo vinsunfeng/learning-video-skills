@@ -62,6 +62,10 @@ git clone https://github.com/vinsunfeng/learning-video-skills.git "$REPO"
 > 这是「凭印象写接口」的变体，而且更难防 ——
 > **官方帮助文本也是一种二手信息。**
 
+**2026-09-27 复测：v0.21.3 仍然坏** ——同机 `curl` 200，`skills install <raw URL>`
+依旧 `Could not fetch ... from any source`（一次性 profile 实测）。
+**结论升级为跨版本事实：这条路的修复不要等，装 skill 一律走路 B（clone + 软链）。**
+
 ⇒ **只走路 B。** 装 skill 靠 clone + 软链（下一节）。
 
 仓库里**故意没有**的东西（别去找）：

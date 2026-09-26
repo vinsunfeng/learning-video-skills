@@ -137,8 +137,9 @@ hermes skills install <identifier>
 v0.19.0 上 `skills install <raw URL>` 一律
 `Could not fetch ... from any source`，即使同机 `curl` 返回 **200**。
 换第三方非隐藏路径的 URL 同样失败；无代理；
-而 `skills_hub.py` 的安装路径里**根本没有 URL 分支**。（**v0.21.0 未复测**——
-装 skill 请直接走 clone + 软链，别赌这个分支。）
+而 `skills_hub.py` 的安装路径里**根本没有 URL 分支**。
+（**2026-09-27 复测 v0.21.3：仍然坏**，同错误同对照——跨版本事实，
+装 skill 请直接走 clone + 软链，不要赌这个分支。）
 
 > **`--help` 承诺了代码里没有的功能** ——
 > 官方帮助文本也是二手信息，**照抄它等于凭印象写接口**。

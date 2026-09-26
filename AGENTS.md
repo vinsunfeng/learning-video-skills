@@ -178,12 +178,10 @@ claude CLI 走用户 Anthropic 账号的按模型月度额度，已撞 429 上�
 - 硬契约：**转录进 cangjie，笔记不进**——V1「原文至少 2 处独立佐证」会被二次压缩的笔记
   骗过（两处佐证可能是同一时刻的两次转述），覆盖率门会把笔记的遗漏当原文的完整
 - 脚本依赖 PyYAML 但文档未声明：系统 python 下 `cangjie.py` 连 `doctor` 都起不来
-  （自检到不了场）；**已本地修复**（延迟导入 + doctor 给安装指引），未修复的机器仍可
-  借 watch-skill venv 的 python（自带 yaml）
-- 编译硬闸门真实有效：`also_read` 写 capability_id 曾被拦（它要 slug，上游契约不一致，
-  另有 impact_analysis 静默丢弃 id 条目）；**已本地修复**（编译器做 id→slug 映射，
-  双形态兼容），补丁在 clone 的 `local-patches` 分支（4f689fa），上游待报 issue/PR；
-  staging 校验不过就不发布
+  （自检到不了场）；**上游已修复**（我们报的 issue #29/#30，社区 PR #31/#32 已于
+  2026-09 前 merge——延迟导入 + doctor 指引 + also_read 双形态兼容含 impact_analysis，
+  2026-09-27 拉取上游后双向实测通过：doctor 可达、id 形态编译零断链），
+  本地补丁分支已退役；`hermes skills install <URL>` v0.21.3 复测仍坏（跨版本事实）
 - 链路剩余缺口：编译出的 skill **触发测试未跑**（装机后用 `trigger_test.py` 双对照补）
 - 分工不变：两 skill 各自迭代（上游活跃，勿 vendor 并入），经 transcript.md 契约衔接，
   分流闸门是阶段 2.5 的类型判定（交接协议见 SKILL.md 阶段 4）
