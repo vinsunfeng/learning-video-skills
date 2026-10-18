@@ -557,6 +557,19 @@ $NOTES_ROOT/<分类>/<slug>/
 
 ---
 
+## 阶段 5 · 可选入库 WeKnora（知识型产出进共享检索池，2026-10-19）
+
+> 默认不执行；用户明确要求「入库」时才做（同阶段 4 惯例）。
+
+**只入知识型产出**：主笔记 / EXTEND / transcript。**PLAYBOOK 不入库**——它走阶段 4 的 skill 固化，入库即冗余。
+
+- **首选 MCP**：若运行时已配 WeKnora MCP 工具，直接调其文档上传能力（一次调用一个文件）。
+- **兜底脚本**（未配 MCP / 批量 / 无人值守时）：
+  `python3 ~/comfy-config/scripts/distill-to-weknora.py <产出目录>`
+  自动跳过 PLAYBOOK；凭据读 `~/.config/weknora.env`（600）。
+- **验证**：每个文件 parse_status 到 `completed` 才算入库成功；同 hash 重复上传会被 WeKnora 去重跳过，属预期。
+- 检索侧价值：入库后主笔记时间戳要点、transcript 原话可被全库自然语言检索（eg2 768d 向量 + FTS 双路）。
+
 ## 质量控制
 
 1. **证据规则**：每条视频知识点必须有语音或画面证据并附时间戳；辨认不清必须标注。
